@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — TXB UniBox CRM</title>
+    <meta
+      name="description"
+      content="Sign in to TXB UniBox CRM — Cold Outreach Platform"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/login.css" />
+  </head>
+  <body>
+    <div class="login-wrapper">
+      <!-- Animated background -->
+      <div class="bg-gradient"></div>
+      <div class="bg-orb bg-orb-1"></div>
+      <div class="bg-orb bg-orb-2"></div>
+      <div class="bg-orb bg-orb-3"></div>
+
+      <div class="login-container">
+        <!-- Left side — Branding -->
+        <div class="login-branding">
+          <div class="brand-content">
+            <div class="brand-logo">
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                <rect width="48" height="48" rx="12" fill="url(#logo-grad)" />
+                <path
+                  d="M14 16h20v3H14zm0 6.5h14v3H14zm0 6.5h18v3H14z"
+                  fill="white"
+                  opacity="0.9"
+                />
+                <path
+                  d="M34 28l4 4-4 4"
+                  stroke="white"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <defs>
+                  <linearGradient id="logo-grad" x1="0" y1="0" x2="48" y2="48">
+                    <stop stop-color="#6366f1" />
+                    <stop offset="1" stop-color="#8b5cf6" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h1 class="brand-title">TXB UniBox</h1>
+            <p class="brand-subtitle">Cold Outreach CRM</p>
+
+            <div class="brand-features">
+              <div class="feature-item">
+                <div class="feature-icon">📧</div>
+                <div>
+                  <strong>Multi-channel outreach</strong>
+                  <span>Gmail, Outlook & custom SMTP</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">🔥</div>
+                <div>
+                  <strong>Smart email warmup</strong>
+                  <span>Build sender reputation automatically</span>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon">📊</div>
+                <div>
+                  <strong>Analytics dashboard</strong>
+                  <span>Track opens, clicks & replies</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right side — Login form -->
+        <div class="login-form-section">
+          <div class="form-wrapper">
+            <div class="form-header">
+              <h2>Welcome back</h2>
+              <p>Sign in to your account to continue</p>
+            </div>
+
+            <form id="login-form" autocomplete="on">
+              <div class="form-group">
+                <label for="email">Email address</label>
+                <div class="input-wrapper">
+                  <svg
+                    class="input-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="M22 7l-10 6L2 7" />
+                  </svg>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="you@company.com"
+                    required
+                    autocomplete="email"
+                  />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                  <svg
+                    class="input-icon"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    required
+                    autocomplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    id="toggle-password"
+                    class="toggle-password"
+                    aria-label="Toggle password visibility"
+                  >
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div id="error-message" class="error-message" role="alert"></div>
+
+              <button type="submit" id="login-btn" class="btn-login">
+                <span class="btn-text">Sign In</span>
+                <span class="btn-loader" hidden>
+                  <svg
+                    class="spinner"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="3"
+                      fill="none"
+                      stroke-dasharray="30 70"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </span>
+              </button>
+            </form>
+
+            <div class="form-footer">
+              <p class="access-note">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                Access is restricted. Contact your admin for an account.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/pages/login.js"></script>
+  </body>
+</html>
