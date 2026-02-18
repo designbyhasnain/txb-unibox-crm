@@ -7,10 +7,15 @@
   <meta name="description" content="TXB UniBox CRM Dashboard — Manage your cold outreach campaigns" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/styles/app.css" />
 </head>
 <body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
   <!-- Loading screen -->
   <div id="auth-loading" class="auth-loading">
     <div class="loading-content">
@@ -25,18 +30,8 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="url(#logo-grad-s)" />
-            <path d="M14 16h20v3H14zm0 6.5h14v3H14zm0 6.5h18v3H14z" fill="white" opacity="0.9"/>
-            <path d="M34 28l4 4-4 4" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="logo-grad-s" x1="0" y1="0" x2="48" y2="48">
-                <stop stop-color="#6366f1"/>
-                <stop offset="1" stop-color="#8b5cf6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span class="logo-text">UniBox</span>
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
         </div>
       </div>
 
@@ -52,6 +47,10 @@
         <a href="#leads" class="nav-item" id="nav-leads">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
           <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
         </a>
         <a href="/accounts.html" class="nav-item" id="nav-accounts">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
@@ -89,8 +88,11 @@
     <main class="main-content">
       <header class="content-header">
         <div class="header-left">
-          <h1 id="page-title">Dashboard</h1>
-          <p id="page-subtitle">Welcome back! Here's your outreach overview.</p>
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <h1 id="page-title">Dashboard</h1>
+            <span style="background: var(--primary-soft); color: var(--primary); font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; margin-bottom: 0.5rem;">Overview</span>
+          </div>
+          <p id="page-subtitle">Welcome back! Here's your outreach overview for today.</p>
         </div>
         <div class="header-right">
           <div class="header-date" id="header-date"></div>
@@ -99,71 +101,94 @@
 
       <div class="dashboard-grid" id="dashboard-content">
         <!-- Stat Cards -->
-        <div class="stat-card stat-campaigns">
-          <div class="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon icon-campaigns">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-label">Active Campaigns</span>
+          <div class="stat-body">
             <span class="stat-value" id="stat-campaigns">0</span>
+            <span class="stat-label">Active Campaigns</span>
           </div>
         </div>
 
-        <div class="stat-card stat-leads">
-          <div class="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon icon-leads">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-label">Total Leads</span>
+          <div class="stat-body">
             <span class="stat-value" id="stat-leads">0</span>
+            <span class="stat-label">Total Leads</span>
           </div>
         </div>
 
-        <div class="stat-card stat-sent">
-          <div class="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon icon-sent">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-label">Emails Sent</span>
+          <div class="stat-body">
             <span class="stat-value" id="stat-sent">0</span>
+            <span class="stat-label">Emails Sent</span>
           </div>
         </div>
 
-        <div class="stat-card stat-replies">
-          <div class="stat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon icon-replies">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+            </div>
           </div>
-          <div class="stat-info">
-            <span class="stat-label">Replies</span>
+          <div class="stat-body">
             <span class="stat-value" id="stat-replies">0</span>
+            <span class="stat-label">Replies Received</span>
           </div>
         </div>
 
         <!-- Quick Actions -->
-        <div class="quick-actions-card">
-          <h3>Quick Actions</h3>
-          <div class="action-buttons">
-            <button class="action-btn" id="btn-new-campaign">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              New Campaign
-            </button>
-            <button class="action-btn" id="btn-import-leads">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Import Leads
-            </button>
-            <button class="action-btn" id="btn-add-account">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
-              Add Email Account
-            </button>
+        <div class="dashboard-card quick-actions">
+          <div class="card-header">
+            <h3>Quick Actions</h3>
+          </div>
+          <div class="card-body">
+            <div class="action-grid">
+              <button class="action-btn" id="btn-new-campaign">
+                <div class="action-icon icon-blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                </div>
+                <span>New Campaign</span>
+              </button>
+              <button class="action-btn" id="btn-import-leads">
+                <div class="action-icon icon-purple">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                </div>
+                <span>Import Leads</span>
+              </button>
+              <button class="action-btn" id="btn-add-account">
+                <div class="action-icon icon-green">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+                </div>
+                <span>Add Account</span>
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Recent Activity -->
-        <div class="activity-card">
-          <h3>Recent Activity</h3>
-          <div class="activity-list" id="activity-list">
-            <div class="activity-empty">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div class="dashboard-card recent-activity">
+          <div class="card-header">
+            <h3>Recent Activity</h3>
+            <button class="btn-text">View All</button>
+          </div>
+          <div class="card-body">
+            <div class="activity-empty" id="activity-list">
+              <div class="empty-icon-circle">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              </div>
               <p>No activity yet. Create your first campaign to get started!</p>
             </div>
           </div>

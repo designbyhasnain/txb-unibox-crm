@@ -1,9 +1,9 @@
-import { requireAuth, logout } from "../lib/auth.js";
+import { requireAuth, signOut } from "../lib/auth.js";
 import { supabase } from "../lib/supabase.js";
 
 // DOM Elements
 const authLoading = document.getElementById("auth-loading");
-const appContent = document.getElementById("app-content");
+const appShell = document.getElementById("app-shell");
 const userAvatar = document.getElementById("user-avatar");
 const userName = document.getElementById("user-name");
 const userEmail = document.getElementById("user-email");
@@ -23,13 +23,19 @@ let currentUser = null;
 
 // Initialize
 async function init() {
-  const user = await requireAuth();
-  if (user) {
-    currentUser = user;
-    renderUserInfo(user);
-    authLoading.style.display = "none";
-    appContent.style.display = "flex";
-    loadCampaigns();
+  try {
+    const user = await requireAuth();
+    if (user) {
+      currentUser = user;
+      renderUserInfo(user);
+      authLoading.hidden = true;
+      appShell.hidden = false;
+      loadCampaigns();
+    }
+  } catch (err) {
+    console.error("Campaigns Init Error:", err);
+    if (authLoading) authLoading.hidden = true;
+    if (appShell) appShell.hidden = false;
   }
 }
 
@@ -46,9 +52,9 @@ function renderUserInfo(user) {
 
 async function loadCampaigns() {
   try {
-    loadingIndicator.style.display = "flex";
-    emptyState.style.display = "none";
-    tableContainer.style.display = "none";
+    loadingIndicator.hidden = false;
+    emptyState.hidden = true;
+    tableContainer.hidden = true;
 
     // Fetch campaigns
     const { data: campaigns, error } = await supabase
@@ -59,16 +65,16 @@ async function loadCampaigns() {
     if (error) throw error;
 
     if (!campaigns || campaigns.length === 0) {
-      emptyState.style.display = "flex";
+      emptyState.hidden = false;
     } else {
       renderCampaigns(campaigns);
-      tableContainer.style.display = "block";
+      tableContainer.hidden = false;
     }
   } catch (err) {
     console.error("Error loading campaigns:", err);
     showToast("Failed to load campaigns", "error");
   } finally {
-    loadingIndicator.style.display = "none";
+    loadingIndicator.hidden = true;
   }
 }
 
@@ -116,12 +122,12 @@ function renderCampaigns(campaigns) {
 
 // Modal Handling
 function openModal() {
-  createModal.classList.add("active");
+  createModal.hidden = false;
   document.getElementById("campaign-name").focus();
 }
 
 function closeModal() {
-  createModal.classList.remove("active");
+  createModal.hidden = true;
   createForm.reset();
 }
 
@@ -194,7 +200,7 @@ function showToast(message, type = "info") {
 }
 
 // Event Listeners
-logoutBtn.addEventListener("click", logout);
+logoutBtn.addEventListener("click", signOut);
 newCampaignBtn.addEventListener("click", openModal);
 emptyCreateBtn.addEventListener("click", openModal);
 createForm.addEventListener("submit", handleCreate);

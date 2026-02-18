@@ -1,192 +1,138 @@
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+// config
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
 
-// Helper: fetch multiple config values from app_config table
-async function getConfigs(...keys: string[]): Promise<Record<string, string>> {
+async function getConfig(key: string) {
+  // Check Env First
+  const fromEnv = Deno.env.get(key);
+  if (fromEnv) return fromEnv;
+
+  console.log(`[Config] ${key} not in env, checking app_config...`);
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-  const { data, error } = await supabaseAdmin
+  const { data } = await supabaseAdmin
     .from("app_config")
-    .select("key, value")
-    .in("key", keys);
-  if (error) throw new Error(`Failed to load config: ${error.message}`);
-  const config: Record<string, string> = {};
-  for (const row of data || []) config[row.key] = row.value;
-  for (const key of keys) {
-    if (!config[key]) throw new Error(`Missing config: ${key}`);
-  }
-  return config;
+    .select("value")
+    .eq("key", key)
+    .single();
+
+  return data?.value || null;
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
-      },
-    });
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const error = url.searchParams.get("error");
+  const state = url.searchParams.get("state");
+
+  const frontendUrl = (await getConfig("FRONTEND_URL")) || "http://localhost:3000";
+
+  if (error) {
+    console.error("Google Auth Error:", error);
+    return Response.redirect(`${frontendUrl}/accounts.html?error=${error}`, 302);
   }
 
-  // Load all config from app_config table
-  let config: Record<string, string>;
-  try {
-    config = await getConfigs("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "FRONTEND_URL");
-  } catch (err) {
-    console.error("Config load error:", err);
-    return new Response("Server configuration error.", { status: 500 });
+  if (!code || !state) {
+    return Response.redirect(`${frontendUrl}/accounts.html?error=missing_code`, 302);
   }
 
-  const FRONTEND_URL = config.FRONTEND_URL || "http://localhost:3000";
-
   try {
-    const url = new URL(req.url);
-    const code = url.searchParams.get("code");
-    const stateParam = url.searchParams.get("state");
-    const errorParam = url.searchParams.get("error");
-
-    if (errorParam) {
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent(errorParam)}`,
-        302
-      );
-    }
-
-    if (!code || !stateParam) {
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Missing authorization code.")}`,
-        302
-      );
-    }
-
     // Decode state
-    let state: { token: string; userId: string };
-    try {
-      state = JSON.parse(atob(stateParam));
-    } catch {
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Invalid state parameter.")}`,
-        302
-      );
+    const { token, userId } = JSON.parse(atob(state));
+
+    const clientId = await getConfig("GOOGLE_CLIENT_ID");
+    const clientSecret = await getConfig("GOOGLE_CLIENT_SECRET");
+
+    if (!clientId || !clientSecret) {
+      throw new Error("Missing OAuth credentials");
     }
 
-    // Verify user JWT
-    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(state.token);
-
-    if (authError || !user) {
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Session expired. Please log in again.")}`,
-        302
-      );
-    }
-
-    // Exchange authorization code for tokens
+    // Exchange code for tokens
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
-        client_id: config.GOOGLE_CLIENT_ID,
-        client_secret: config.GOOGLE_CLIENT_SECRET,
+        client_id: clientId,
+        client_secret: clientSecret,
         redirect_uri: REDIRECT_URI,
         grant_type: "authorization_code",
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokens = await tokenResponse.json();
+    console.log(`[AUTH_CALLBACK] Tokens received for code: ${code?.substring(0, 10)}...`);
 
-    if (!tokenResponse.ok || !tokenData.access_token) {
-      console.error("Token exchange error:", tokenData);
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Failed to exchange authorization code.")}`,
-        302
-      );
+    if (!tokenResponse.ok) {
+        console.error(`[AUTH_CALLBACK_ERR] Token exchange failed:`, tokens);
+        return Response.redirect(`${frontendUrl}/accounts.html?error=token_exchange_failed`, 302);
     }
 
-    const { access_token, refresh_token } = tokenData;
-
-    // Get Gmail user info
-    const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-      headers: { Authorization: `Bearer ${access_token}` },
+    // Get User Profile from Google
+    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
     });
+    const profile = await profileResponse.json();
 
-    const userInfo = await userInfoRes.json();
-    const gmailAddress = userInfo.email;
-    const displayName = userInfo.name || gmailAddress.split("@")[0];
-
-    if (!gmailAddress) {
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Could not retrieve Gmail address.")}`,
-        302
-      );
-    }
-
-    // Check for duplicate
+    // Store in Supabase
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
+    
+    console.log(`[DB] Saving tokens for ${profile.email}...`);
+    
+    // Check if email already exists
     const { data: existing } = await supabaseAdmin
-      .from("email_accounts")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("email_address", gmailAddress)
-      .maybeSingle();
-
-    if (existing) {
-      // Update tokens for existing account
-      await supabaseAdmin
         .from("email_accounts")
-        .update({
-          oauth_access_token: access_token,
-          oauth_refresh_token: refresh_token,
-          status: "Active",
-          display_name: displayName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id);
+        .select("id")
+        .eq("email_address", profile.email)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      return Response.redirect(`${FRONTEND_URL}/accounts.html?success=gmail`, 302);
+    const payload: any = {
+        access_token: tokens.access_token,
+        expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        status: 'Active'
+    };
+
+    // Google only sends refresh_token on the FIRST authorization
+    if (tokens.refresh_token) {
+        payload.refresh_token = tokens.refresh_token;
     }
 
-    // Insert new email account
-    const { error: insertError } = await supabaseAdmin
-      .from("email_accounts")
-      .insert({
-        user_id: user.id,
-        email_address: gmailAddress,
-        display_name: displayName,
-        provider: "Gmail",
-        oauth_access_token: access_token,
-        oauth_refresh_token: refresh_token,
-        smtp_host: "smtp.gmail.com",
-        smtp_port: 465,
-        imap_host: "imap.gmail.com",
-        imap_port: 993,
-        status: "Active",
-        daily_limit: 50,
-      });
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("Failed to save account: " + insertError.message)}`,
-        302
-      );
+    let dbResult;
+    if (existing) {
+        console.log(`[DB] Updating existing account: ${existing.id}`);
+        dbResult = await supabaseAdmin
+            .from("email_accounts")
+            .update(payload)
+            .eq("id", existing.id);
+    } else {
+        console.log(`[DB] Inserting new account for ${profile.email}`);
+        dbResult = await supabaseAdmin
+            .from("email_accounts")
+            .insert({
+                ...payload,
+                user_id: userId,
+                email_address: profile.email,
+                display_name: profile.name || profile.email,
+                provider: "Gmail",
+                daily_limit: 50
+            });
     }
 
-    return Response.redirect(`${FRONTEND_URL}/accounts.html?success=gmail`, 302);
-  } catch (err) {
-    console.error("gmail-auth-callback error:", err);
-    return Response.redirect(
-      `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent("An unexpected error occurred.")}`,
-      302
-    );
+    if (dbResult.error) {
+        throw new Error(`Database write error: ${dbResult.error.message}`);
+    }
+
+    console.log("[Success] Gmail account connected and saved.");
+    return Response.redirect(`${frontendUrl}/accounts.html?success=gmail`, 302);
+
+  } catch (err: any) {
+    console.error("Callback Error:", err);
+    return Response.redirect(`${frontendUrl}/accounts.html?error=${encodeURIComponent(err.message)}`, 302);
   }
 });

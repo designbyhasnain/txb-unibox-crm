@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unibox — TXB UniBox CRM</title>
+  <meta name="description" content="Unified Inbox for managing all your incoming outreach replies." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <link rel="stylesheet" href="/src/styles/unibox.css" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Loading screen -->
+  <div id="auth-loading" class="auth-loading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Loading Unibox...</p>
+    </div>
+  </div>
+
+  <!-- App shell (hidden until authenticated) -->
+  <div id="app-shell" class="app-shell" hidden>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="/campaigns.html" class="nav-item" id="nav-campaigns">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Campaigns</span>
+        </a>
+        <a href="#leads" class="nav-item" id="nav-leads">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item active" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
+        </a>
+        <a href="/accounts.html" class="nav-item" id="nav-accounts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          <span>Email Accounts</span>
+        </a>
+        <a href="#warmup" class="nav-item" id="nav-warmup">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+          <span>Warmup</span>
+        </a>
+        <a href="#analytics" class="nav-item" id="nav-analytics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          <span>Analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile" id="user-profile">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="user-name">Loading...</span>
+            <span class="user-email" id="user-email">...</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-logout" title="Sign out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16,17 21,12 16,7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main unibox content -->
+    <main class="main-content">
+      <div class="unibox-container-inner">
+        <!-- Left Pane: Filters (Sidebar style) -->
+        <aside class="unibox-filters">
+          <!-- Status Section (Top) -->
+          <div class="sidebar-section">
+            <div class="section-title">Status Labels</div>
+            <div id="status-filters">
+              <button class="filter-item active" data-status="all">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>All Leads</span>
+              </button>
+              <button class="filter-item" data-status="Interested">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+                <span>Interested</span>
+              </button>
+              <button class="filter-item" data-status="Meeting Booked">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Meeting Booked</span>
+              </button>
+              <button class="filter-item" data-status="Won">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M12 15c-3.31 0-6-2.69-6-6h12c0 3.31-2.69 6-6 6z"/><path d="M12 22V15"/></svg>
+                <span>Won</span>
+              </button>
+              
+              <div class="dropdown" id="status-more-container">
+                <button class="filter-item" id="more-btn">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                  <span>More Labels</span>
+                </button>
+                <div class="dropdown-menu" id="more-dropdown-menu">
+                  <div class="dropdown-item" data-status="Out of office">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <span>Out of office</span>
+                  </div>
+                  <div class="dropdown-item" data-status="Wrong person">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <span>Wrong person</span>
+                  </div>
+                  <div class="dropdown-item" data-status="Not Interested">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #ef4444;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <span>Not interested</span>
+                  </div>
+                  <div class="dropdown-item" data-status="Lost">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #ef4444;"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <span>Lost</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campaigns Section (Middle) -->
+          <div class="sidebar-section">
+            <div class="section-title">All Campaigns</div>
+            <div id="campaign-filters">
+              <!-- Populated by JS -->
+              <div class="loading-spinner-mini" style="margin: 10px;"></div>
+            </div>
+          </div>
+
+          <!-- Inboxes Section (Bottom) -->
+          <div class="sidebar-section">
+            <div class="section-title">All Inboxes</div>
+            <div id="inbox-filters">
+              <button class="filter-item active" data-folder="inbox">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+                <span>Inbox</span>
+              </button>
+              <button class="filter-item" data-folder="unread">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Unread only</span>
+              </button>
+              <button class="filter-item" data-folder="reminders">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Reminders only</span>
+              </button>
+              <button class="filter-item" data-folder="sent">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polyline points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <span>Sent</span>
+              </button>
+            </div>
+            
+            <!-- Sleek Global Search bar - shown only when All Inboxes active -->
+            <div class="global-search-container hidden" id="global-search-container">
+              <div class="search-input-wrapper">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="global-search" placeholder="Search across accounts...">
+              </div>
+            </div>
+          </div>
+
+          <!-- Email Accounts Section -->
+          <div class="sidebar-section">
+            <div class="section-title">Email Accounts</div>
+            <div id="account-filters">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- Middle Pane: Thread List -->
+        <section class="unibox-threads">
+          <div class="pane-header-main">
+            <div class="tabs-row" id="middle-pane-tabs">
+              <button class="tab-btn active" data-folder="inbox">Inbox</button>
+              <button class="tab-btn" data-folder="sent">Sent</button>
+              <div class="sync-controls">
+                <button class="btn-refresh" id="refresh-account-btn" title="Sync Selected Account">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>Sync Account</span>
+                </button>
+                <button class="btn-refresh btn-primary-refresh" id="sync-all-btn" title="Sync All connected accounts">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <span>Sync All</span>
+                  </button>
+              </div>
+            </div>
+            <div class="search-box-threads">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="thread-search" placeholder="Search mail">
+            </div>
+          </div>
+          <div class="thread-list scrollable" id="thread-list">
+            <div class="thread-item-placeholder">
+              <div class="loading-spinner-small"></div>
+            </div>
+          </div>
+          <div class="thread-list-footer">
+            <button class="btn-load-more">Load more</button>
+          </div>
+        </section>
+
+        <!-- Right Pane: Conversation View -->
+        <section class="unibox-content" id="unibox-content">
+          <div class="no-selection">
+            <div class="selection-empty-icon">
+              <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.2; margin-bottom: 1rem;"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v.01"/></svg>
+            </div>
+            <h3>Stay connected. Take Unibox with you anywhere.</h3>
+            <p>Scan the QR code with your phone to download the Unibox mobile app.</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="/src/pages/unibox.js"></script>
+</body>
+</html>

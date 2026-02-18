@@ -12,6 +12,7 @@ export default defineConfig({
           accounts: "accounts.html",
           campaigns: "campaigns.html",
           campaign: "campaign.html",
+          unibox: "unibox.html",
         },
     },
   },

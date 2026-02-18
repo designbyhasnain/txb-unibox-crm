@@ -119,7 +119,7 @@ COMMENT ON TABLE public.sequences IS 'Ordered email steps (sequence) within a ca
 -- ──────────────────────────────────────────────────────────────
 CREATE TYPE public.lead_status AS ENUM (
     'Not Contacted', 'Contacted', 'Replied', 'Interested',
-    'Not Interested', 'Bounced', 'Unsubscribed'
+    'Not Interested', 'Bounced', 'Unsubscribed', 'Meeting Booked', 'Meeting Completed', 'Won'
 );
 
 CREATE TABLE public.leads (
@@ -284,3 +284,54 @@ CREATE POLICY warmup_stats_own_data ON public.warmup_stats
     FOR ALL USING (
         email_account_id IN (SELECT id FROM public.email_accounts WHERE user_id = auth.uid())
     );
+
+-- ──────────────────────────────────────────────────────────────
+-- 11. REPLIES — Incoming messages for Unibox
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE public.replies (
+    id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id           UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    lead_id           UUID REFERENCES public.leads(id) ON DELETE CASCADE,
+    campaign_id       UUID REFERENCES public.campaigns(id) ON DELETE CASCADE,
+    email_account_id  UUID REFERENCES public.email_accounts(id) ON DELETE CASCADE,
+    thread_id         TEXT,
+    message_id        TEXT UNIQUE,
+    in_reply_to       TEXT,
+    subject           TEXT,
+    body_text         TEXT,
+    body_html         TEXT,
+    snippet           TEXT,
+    from_email        TEXT NOT NULL,
+    from_name         TEXT,
+    to_email          TEXT NOT NULL,
+    received_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_read           BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_replies_user_id     ON public.replies(user_id);
+CREATE INDEX idx_replies_lead_id     ON public.replies(lead_id);
+CREATE INDEX idx_replies_campaign_id ON public.replies(campaign_id);
+CREATE INDEX idx_replies_received_at ON public.replies(received_at);
+
+ALTER TABLE public.replies ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY replies_own_data ON public.replies
+    FOR ALL USING (auth.uid() = user_id);
+
+-- ──────────────────────────────────────────────────────────────
+-- 12. APP_CONFIG — Server-side configuration
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE public.app_config (
+    key          TEXT PRIMARY KEY,
+    value        TEXT NOT NULL,
+    description  TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE public.app_config IS 'Secure app configuration. Only accessible via service_role key. Never expose to frontend.';
+
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
+-- No public policies — admins only via dashboard/service role
+

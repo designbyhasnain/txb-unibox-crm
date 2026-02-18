@@ -7,11 +7,16 @@
   <meta name="description" content="Manage connected email accounts for cold outreach" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/styles/app.css" />
   <link rel="stylesheet" href="/src/styles/accounts.css" />
 </head>
 <body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
   <!-- Loading screen -->
   <div id="auth-loading" class="auth-loading">
     <div class="loading-content">
@@ -26,18 +31,8 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
-          <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
-            <rect width="48" height="48" rx="12" fill="url(#logo-grad-a)" />
-            <path d="M14 16h20v3H14zm0 6.5h14v3H14zm0 6.5h18v3H14z" fill="white" opacity="0.9"/>
-            <path d="M34 28l4 4-4 4" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="logo-grad-a" x1="0" y1="0" x2="48" y2="48">
-                <stop stop-color="#6366f1"/>
-                <stop offset="1" stop-color="#8b5cf6"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span class="logo-text">UniBox</span>
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
         </div>
       </div>
 
@@ -53,6 +48,10 @@
         <a href="#leads" class="nav-item" id="nav-leads">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
           <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
         </a>
         <a href="/accounts.html" class="nav-item active" id="nav-accounts">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
@@ -93,7 +92,10 @@
           <h1>Email Accounts</h1>
           <p>Manage your connected email accounts for outreach.</p>
         </div>
-        <div class="header-right">
+        <div class="header-right" style="display: flex; gap: 10px;">
+          <button class="btn-secondary" id="btn-refresh-accounts" title="Refresh list">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          </button>
           <button class="btn-primary" id="btn-add-account">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Account
@@ -110,7 +112,7 @@
 
         <div class="empty-state" id="empty-state" hidden>
           <div class="empty-icon">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="4" width="20" height="16" rx="2"/>
               <path d="M22 7l-10 6L2 7"/>
             </svg>
@@ -129,7 +131,7 @@
               <th>Email Address</th>
               <th>Provider</th>
               <th>Display Name</th>
-              <th>Daily Limit</th>
+              <th>Usage</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -141,137 +143,119 @@
     </main>
   </div>
 
-  <!-- ═══ Add Account Modal ═══ -->
   <div class="modal-overlay" id="modal-overlay" hidden>
     <div class="modal" id="add-account-modal">
       <!-- Step 1: Choose Provider -->
       <div class="modal-step" id="step-choose-provider">
         <div class="modal-header">
-          <h2>Connect Email Account</h2>
-          <p>Choose your email provider to get started.</p>
-          <button class="modal-close" id="modal-close">&times;</button>
+          <h2>Connect Account</h2>
+          <p>Select how you'd like to connect your email.</p>
+          <button class="modal-close" id="modal-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
         </div>
         <div class="modal-body">
           <div class="provider-grid">
-            <button class="provider-card" id="provider-gmail">
-              <div class="provider-icon provider-gmail-icon">
-                <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                  <path fill="#4285F4" d="M43.6 20.1H42V20H24v8h11.3C33.9 33.4 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 5.7 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
-                  <path fill="#34A853" d="M6.3 14.7l6.6 4.8C14.5 15.5 18.8 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 5.7 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
-                  <path fill="#FBBC05" d="M24 44c5.2 0 9.9-1.6 13.4-4.4l-6.2-5.2C29.3 36 26.8 37 24 37c-5.3 0-9.8-3.6-11.4-8.5l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
-                  <path fill="#EA4335" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.4l6.2 5.2C36.6 39.3 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/>
-                </svg>
+            <button class="provider-card active" id="provider-gmail">
+              <div class="provider-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20m10-10H2"/></svg>
               </div>
-              <span class="provider-name">Gmail</span>
-              <span class="provider-type">OAuth 2.0</span>
-              <span class="provider-badge recommended">Recommended</span>
-            </button>
-
-            <button class="provider-card" id="provider-outlook">
-              <div class="provider-icon provider-outlook-icon">
-                <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                  <path fill="#1976D2" d="M28 13h14v22H28z"/>
-                  <path fill="#2196F3" d="M28 13l7 8.5L28 30V13z"/>
-                  <path fill="#1E88E5" d="M42 13l-7 8.5L42 30V13z"/>
-                  <path fill="#1565C0" d="M28 30h14v5H28z"/>
-                  <path fill="#42A5F5" d="M6 10h20v28H6z" opacity="0.9"/>
-                  <path fill="white" d="M16 18c-3.3 0-6 2.7-6 6s2.7 6 6 6 6-2.7 6-6-2.7-6-6-6zm0 10c-2.2 0-4-1.8-4-4s1.8-4 4-4 4 1.8 4 4-1.8 4-4 4z"/>
-                </svg>
+              <div class="provider-info">
+                <span class="provider-name">Google / Gmail</span>
+                <span class="provider-type">OAuth 2.0 (Fast & Secure)</span>
               </div>
-              <span class="provider-name">Outlook</span>
-              <span class="provider-type">OAuth 2.0</span>
-              <span class="provider-badge coming-soon">Coming Soon</span>
             </button>
-
             <button class="provider-card" id="provider-smtp">
-              <div class="provider-icon provider-smtp-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <rect x="2" y="3" width="20" height="18" rx="2"/>
-                  <path d="M8 10h8M8 14h5"/>
-                  <circle cx="18" cy="18" r="3" fill="#6366f1" stroke="none"/>
-                  <path d="M17 18h2M18 17v2" stroke="white" stroke-width="1.5"/>
-                </svg>
+              <div class="provider-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
               </div>
-              <span class="provider-name">Custom SMTP/IMAP</span>
-              <span class="provider-type">Manual Configuration</span>
+              <div class="provider-info">
+                <span class="provider-name">Manual SMTP</span>
+                <span class="provider-type">Custom Server Configuration</span>
+              </div>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Step 2: Custom SMTP Form -->
+      <!-- Step 2: SMTP Form -->
       <div class="modal-step" id="step-smtp-form" hidden>
         <div class="modal-header">
-          <button class="modal-back" id="smtp-back">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          <h2>SMTP Configuration</h2>
+          <p>Provide your manual mail server details.</p>
+          <button class="modal-back" id="smtp-back" title="Go back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
-          <h2>Custom SMTP/IMAP</h2>
-          <p>Enter your mail server details manually.</p>
-          <button class="modal-close" id="smtp-close">&times;</button>
+          <button class="modal-close" id="smtp-close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
         </div>
         <div class="modal-body">
-          <form id="smtp-form" autocomplete="off">
+          <form id="smtp-form">
             <div class="form-section">
-              <h4>Account Info</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="smtp-email">Email Address *</label>
-                  <input type="email" id="smtp-email" placeholder="you@example.com" required />
-                </div>
-                <div class="form-group">
-                  <label for="smtp-display-name">Display Name</label>
-                  <input type="text" id="smtp-display-name" placeholder="John Doe" />
-                </div>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <h4>SMTP Settings (Sending)</h4>
+              <h4>Server Details</h4>
               <div class="form-row">
                 <div class="form-group flex-2">
-                  <label for="smtp-host">SMTP Host *</label>
-                  <input type="text" id="smtp-host" placeholder="smtp.example.com" required />
+                  <label>SMTP Host</label>
+                  <input type="text" id="smtp-host" placeholder="smtp.gmail.com" required>
                 </div>
-                <div class="form-group flex-1">
-                  <label for="smtp-port">Port *</label>
-                  <input type="number" id="smtp-port" placeholder="587" value="587" required />
+                <div class="form-group">
+                  <label>Port</label>
+                  <input type="number" id="smtp-port" placeholder="587" value="587" required>
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="smtp-username">Username *</label>
-                  <input type="text" id="smtp-username" placeholder="you@example.com" required />
-                </div>
-                <div class="form-group">
-                  <label for="smtp-password">Password *</label>
-                  <input type="password" id="smtp-password" placeholder="App password or mail password" required />
+                  <label>Encryption</label>
+                  <select id="smtp-encryption" style="padding: 0.7rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font);">
+                    <option value="STARTTLS">STARTTLS</option>
+                    <option value="SSL/TLS">SSL/TLS</option>
+                    <option value="None">None</option>
+                  </select>
                 </div>
               </div>
             </div>
 
             <div class="form-section">
-              <h4>IMAP Settings (Receiving)</h4>
+              <h4>Incoming (IMAP)</h4>
               <div class="form-row">
                 <div class="form-group flex-2">
-                  <label for="imap-host">IMAP Host *</label>
-                  <input type="text" id="imap-host" placeholder="imap.example.com" required />
+                  <label>IMAP Host</label>
+                  <input type="text" id="imap-host" placeholder="imap.gmail.com">
                 </div>
-                <div class="form-group flex-1">
-                  <label for="imap-port">Port *</label>
-                  <input type="number" id="imap-port" placeholder="993" value="993" required />
+                <div class="form-group">
+                  <label>Port</label>
+                  <input type="number" id="imap-port" placeholder="993" value="993">
                 </div>
               </div>
             </div>
 
-            <div class="form-error" id="smtp-error" hidden></div>
+            <div class="form-section">
+              <h4>Authentication</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Email Address / Username</label>
+                  <input type="email" id="smtp-user" placeholder="user@gmail.com" required>
+                </div>
+                <div class="form-group">
+                  <label>Display Name</label>
+                  <input type="text" id="display-name" placeholder="John Doe">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group flex-2">
+                  <label>Password / App Password</label>
+                  <input type="password" id="smtp-pass" placeholder="••••••••" required>
+                </div>
+              </div>
+            </div>
 
-            <div class="form-actions">
-              <button type="button" class="btn-secondary" id="smtp-cancel">Cancel</button>
-              <button type="submit" class="btn-primary" id="smtp-submit">
-                <span class="btn-text">Connect Account</span>
-                <span class="btn-loader" hidden>
-                  <svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-                </span>
+            <div class="form-actions" style="margin-top: 2rem;">
+              <button type="button" class="btn-secondary" id="btn-test-smtp">
+                <span class="btn-text">Test Connection</span>
+              </button>
+              <button type="submit" class="btn-primary" id="btn-save-smtp">
+                <span>Save Account</span>
               </button>
             </div>
           </form>

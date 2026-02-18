@@ -1,191 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Campaigns - TXB UniBox CRM</title>
-    <link rel="stylesheet" href="/src/styles/app.css" />
-    <link rel="stylesheet" href="/src/styles/campaigns.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="auth-loading" class="auth-loading">
-      <div class="loader"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaigns — TXB UniBox CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <link rel="stylesheet" href="/src/styles/campaigns.css" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Loading screen -->
+  <div id="auth-loading" class="auth-loading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Authenticating...</p>
     </div>
+  </div>
 
-    <div class="app-container" style="display: none" id="app-content">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">
-          <div class="logo-icon">
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 2L2 7L12 12L22 7L12 2Z"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M2 17L12 22L22 17"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M2 12L12 17L22 12"
-                stroke="white"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
-          <span>TXB UniBox</span>
-        </div>
-
-        <nav class="nav-menu">
-          <a href="/" class="nav-item">
-            <span class="nav-icon">🏠</span>
-            Dashboard
-          </a>
-          <a href="/campaigns.html" class="nav-item active">
-            <span class="nav-icon">🚀</span>
-            Campaigns
-          </a>
-          <a href="#leads" class="nav-item">
-            <span class="nav-icon">👥</span>
-            Leads
-          </a>
-          <a href="/accounts.html" class="nav-item">
-            <span class="nav-icon">📧</span>
-            Email Accounts
-          </a>
-          <a href="#analytics" class="nav-item">
-            <span class="nav-icon">📊</span>
-            Analytics
-          </a>
-          <a href="#settings" class="nav-item">
-            <span class="nav-icon">⚙️</span>
-            Settings
-          </a>
-        </nav>
-
-        <div class="user-profile">
-          <div class="avatar" id="user-avatar">?</div>
-          <div class="user-info">
-            <div class="user-name" id="user-name">Loading...</div>
-            <div class="user-email" id="user-email">...</div>
-          </div>
-          <button class="logout-btn" id="logout-btn">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <polyline points="16 17 21 12 16 7" stroke-linecap="round" stroke-linejoin="round" />
-              <line x1="21" y1="12" x2="9" y2="12" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Main Content -->
-      <main class="main-content">
-        <header class="top-bar">
-          <h1 class="page-title">Campaigns</h1>
-          <button class="primary-btn" id="new-campaign-btn">
-            <span class="icon">+</span> New Campaign
-          </button>
-        </header>
-
-        <div class="content-area">
-          <div class="campaigns-container">
-            <div id="campaigns-loading" class="campaigns-loading">
-              <div class="spinner"></div>
-              <p>Loading campaigns...</p>
-            </div>
-
-            <div id="campaigns-empty" class="campaigns-empty" style="display: none">
-              <div class="empty-icon">🚀</div>
-              <h3>No campaigns yet</h3>
-              <p>Create your first campaign to start reaching out to prospects.</p>
-              <button class="secondary-btn" id="empty-create-btn">Create Campaign</button>
-            </div>
-
-            <!-- Campaigns Table -->
-            <div class="table-responsive" id="campaigns-table-container" style="display: none">
-              <table class="campaigns-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Status</th>
-                    <th>Progress</th>
-                    <th>Sent</th>
-                    <th>Replied</th>
-                    <th>Date Created</th>
-                  </tr>
-                </thead>
-                <tbody id="campaigns-list">
-                  <!-- Campaigns will be injected here -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-
-    <!-- Create Campaign Modal -->
-    <div id="create-modal" class="modal-overlay">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>Create New Campaign</h2>
-          <button class="close-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <form id="create-campaign-form">
-            <div class="form-group">
-              <label for="campaign-name">Campaign Name</label>
-              <input
-                type="text"
-                id="campaign-name"
-                placeholder="e.g. Q1 Outreach - Tech Startups"
-                required
-              />
-            </div>
-            <div class="form-actions">
-              <button type="button" class="cancel-btn close-modal-btn">Cancel</button>
-              <button type="submit" class="submit-btn">Create Campaign</button>
-            </div>
-          </form>
+  <!-- App shell (hidden until authenticated) -->
+  <div id="app-shell" class="app-shell" hidden>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
         </div>
       </div>
+
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="/campaigns.html" class="nav-item active" id="nav-campaigns">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Campaigns</span>
+        </a>
+        <a href="#leads" class="nav-item" id="nav-leads">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
+        </a>
+        <a href="/accounts.html" class="nav-item" id="nav-accounts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          <span>Email Accounts</span>
+        </a>
+        <a href="#warmup" class="nav-item" id="nav-warmup">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+          <span>Warmup</span>
+        </a>
+        <a href="#analytics" class="nav-item" id="nav-analytics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          <span>Analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile" id="user-profile">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="user-name">Loading...</span>
+            <span class="user-email" id="user-email">...</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-logout" title="Sign out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16,17 21,12 16,7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="content-header">
+        <div class="header-left">
+          <h1>Campaigns</h1>
+          <p>Manage and track your email outreach campaigns.</p>
+        </div>
+        <div class="header-right">
+          <button class="btn-primary" id="new-campaign-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Campaign
+          </button>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <div class="campaigns-container">
+          <div id="campaigns-loading" class="campaigns-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading campaigns...</p>
+          </div>
+
+          <div id="campaigns-empty" class="empty-state" hidden>
+            <div class="empty-icon">🚀</div>
+            <h3>No campaigns yet</h3>
+            <p>Create your first campaign to start reaching out to prospects.</p>
+            <button class="btn-primary" id="empty-create-btn">Create Campaign</button>
+          </div>
+
+          <!-- Campaigns Table -->
+          <div class="table-responsive" id="campaigns-table-container" hidden>
+            <table class="campaigns-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th>Sent</th>
+                  <th>Replied</th>
+                  <th>Date Created</th>
+                </tr>
+              </thead>
+              <tbody id="campaigns-list">
+                <!-- Campaigns will be injected here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create Campaign Modal -->
+  <div id="create-modal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Create New Campaign</h2>
+        <button class="modal-close close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="create-campaign-form">
+          <div class="form-group">
+            <label for="campaign-name">Campaign Name</label>
+            <input type="text" id="campaign-name" placeholder="e.g. Q1 Outreach - Tech Startups" required />
+          </div>
+          <div class="form-actions" style="margin-top: 2rem;">
+            <button type="button" class="btn-secondary close-modal-btn">Cancel</button>
+            <button type="submit" class="btn-primary submit-btn">Create Campaign</button>
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 
-    <!-- Toast Container -->
-    <div id="toast-container" class="toast-container"></div>
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
 
-    <script type="module" src="/src/pages/campaigns.js"></script>
-  </body>
+  <script type="module" src="/src/pages/campaigns.js"></script>
+</body>
 </html>

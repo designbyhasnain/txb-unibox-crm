@@ -1,327 +1,480 @@
 import { requireAuth, signOut, getCurrentUser } from "../lib/auth.js";
 import { supabase } from "../lib/supabase.js";
 
-// ─── Constants ───────────────────────────────────────────────
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-// ─── State ───────────────────────────────────────────────────
-let currentUser = null;
-let accounts = [];
-
-// ─── Auth Gate ───────────────────────────────────────────────
-async function initPage() {
-  const session = await requireAuth();
-  if (!session) return;
-
-  document.getElementById("auth-loading").hidden = true;
-  document.getElementById("app-shell").hidden = false;
-
-  currentUser = await getCurrentUser();
-  if (currentUser) {
-    const name = currentUser.user_metadata?.name || currentUser.email.split("@")[0];
-    const initials = name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
-    document.getElementById("user-name").textContent = name;
-    document.getElementById("user-email").textContent = currentUser.email;
-    document.getElementById("user-avatar").textContent = initials;
-  }
-
-  // Check for OAuth callback success/error in URL params
-  handleOAuthCallback();
-
-  // Load accounts
-  await loadAccounts();
-
-  // Initialize event listeners
-  initEventListeners();
-}
-
-// ─── Handle OAuth Callback ───────────────────────────────────
-function handleOAuthCallback() {
-  const params = new URLSearchParams(window.location.search);
-
-  if (params.get("success") === "gmail") {
-    showToast("Gmail account connected successfully!", "success");
-    // Clean URL
-    window.history.replaceState({}, "", "/accounts.html");
-  }
-
-  if (params.get("error")) {
-    const errorMsg = decodeURIComponent(params.get("error"));
-    showToast(`Error: ${errorMsg}`, "error");
-    window.history.replaceState({}, "", "/accounts.html");
-  }
-}
-
-// ─── Load Accounts ───────────────────────────────────────────
-async function loadAccounts() {
-  const tableLoading = document.getElementById("table-loading");
-  const emptyState = document.getElementById("empty-state");
-  const accountsTable = document.getElementById("accounts-table");
-
-  try {
+/**
+ * AccountService — Handles all data fetching and Supabase transitions.
+ * No DOM logic allowed here.
+ */
+class AccountService {
+  /**
+   * Fetch even more details about accounts.
+   */
+  static async fetchAccounts() {
+    console.log("📂 AccountService: Fetching accounts...");
     const { data, error } = await supabase
       .from("email_accounts")
       .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    accounts = data || [];
+    return data || [];
+  }
 
-    tableLoading.hidden = true;
+  /**
+   * Delete an account by ID.
+   */
+  static async deleteAccount(id) {
+    const { error } = await supabase.from("email_accounts").delete().eq("id", id);
+    if (error) throw error;
+  }
 
-    if (accounts.length === 0) {
-      emptyState.hidden = false;
-      accountsTable.hidden = true;
-    } else {
-      emptyState.hidden = true;
-      accountsTable.hidden = false;
-      renderAccountsTable();
-    }
-  } catch (err) {
-    console.error("Error loading accounts:", err);
-    tableLoading.hidden = true;
-    showToast("Failed to load email accounts.", "error");
+  /**
+   * Test SMTP Connection via Edge Function.
+   */
+  static async testSmtpConnection(params) {
+    console.log("🧪 AccountService: Testing SMTP connection...");
+    const { data, error } = await supabase.functions.invoke("smtp-tester", {
+      body: params,
+    });
+    if (error) throw error;
+    if (!data.success) throw new Error(data.message || "Connection failed");
+    return data;
+  }
+
+  /**
+   * Create an SMTP account.
+   */
+  static async createSmtpAccount(accountData) {
+    console.log("💾 AccountService: Saving SMTP account...");
+    const { data, error } = await supabase.from("email_accounts").insert(accountData).select().single();
+    if (error) throw error;
+    return data;
   }
 }
 
-// ─── Render Accounts Table ───────────────────────────────────
-function renderAccountsTable() {
-  const tbody = document.getElementById("accounts-tbody");
-  tbody.innerHTML = accounts.map((acc) => {
-    const statusClass = acc.status === "Active" ? "status-active" :
-                        acc.status === "Error" ? "status-error" : "status-inactive";
-    const providerIcon = getProviderIcon(acc.provider);
+/**
+ * AccountUI — Handles all rendering, DOM updates, and UI feedback.
+ */
+class AccountUI {
+  constructor() {
+    this.accounts = [];
+    this.currentUser = null;
+    
+    // Bindings
+    this.elements = {
+      tbody: document.getElementById("accounts-tbody"),
+      table: document.getElementById("accounts-table"),
+      loading: document.getElementById("table-loading"),
+      empty: document.getElementById("empty-state"),
+      authLoading: document.getElementById("auth-loading"),
+      appShell: document.getElementById("app-shell"),
+      userName: document.getElementById("user-name"),
+      userEmail: document.getElementById("user-email"),
+      userAvatar: document.getElementById("user-avatar"),
+      gmailLink: document.getElementById("gmail-direct-link"),
+      modalOverlay: document.getElementById("modal-overlay"),
+      smtpForm: document.getElementById("smtp-form")
+    };
+  }
 
+  /**
+   * Initialize User Info in the UI
+   */
+  renderUserInfo(user) {
+    if (!user) return;
+    this.currentUser = user;
+    const name = user.user_metadata?.name || user.email.split("@")[0];
+    const initials = name.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2);
+    
+    if (this.elements.userName) this.elements.userName.textContent = name;
+    if (this.elements.userEmail) this.elements.userEmail.textContent = user.email;
+    if (this.elements.userAvatar) this.elements.userAvatar.textContent = initials;
+  }
+
+  /**
+   * Reveal App shell
+   */
+  showApp() {
+    if (this.elements.authLoading) {
+      this.elements.authLoading.hidden = true;
+      this.elements.authLoading.style.display = "none";
+    }
+    if (this.elements.appShell) this.elements.appShell.hidden = false;
+  }
+
+  /**
+   * Render the accounts table
+   */
+  renderTable(accounts) {
+    this.accounts = accounts;
+    
+    if (this.elements.loading) this.elements.loading.hidden = true;
+    
+    if (accounts.length === 0) {
+      if (this.elements.empty) this.elements.empty.hidden = false;
+      if (this.elements.table) this.elements.table.hidden = true;
+      return;
+    }
+
+    if (this.elements.empty) this.elements.empty.hidden = true;
+    if (this.elements.table) {
+      this.elements.table.hidden = false;
+      this.elements.table.style.display = "table";
+    }
+
+    if (!this.elements.tbody) return;
+
+    this.elements.tbody.innerHTML = accounts.map(acc => this.generateRowHtml(acc)).join("");
+  }
+
+  generateRowHtml(acc) {
+    const statusClass = acc.status === "Active" ? "status-active" : 
+                        acc.status === "Error" ? "status-error" : "status-inactive";
+    
+    const usagePercent = 10; // Placeholder for now, could be (acc.sent_today / acc.daily_limit) * 100
+    
     return `
       <tr data-id="${acc.id}">
         <td>
           <div class="email-cell">
-            ${providerIcon}
-            <span>${escapeHtml(acc.email_address)}</span>
+            <span style="font-weight: 600; color: var(--text-main);">${this.escapeHtml(acc.email_address)}</span>
           </div>
         </td>
-        <td><span class="provider-tag">${escapeHtml(acc.provider)}</span></td>
-        <td>${escapeHtml(acc.display_name || "—")}</td>
-        <td>${acc.daily_limit || 50}</td>
-        <td><span class="status-badge ${statusClass}">${acc.status}</span></td>
         <td>
-          <div class="action-cell">
-            <button class="btn-icon btn-delete" data-id="${acc.id}" title="Remove account">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-            </button>
-          </div>
+          <span class="status-badge" style="background: var(--bg-main); color: var(--text-muted); border: 1px solid var(--border);">
+            ${this.escapeHtml(acc.provider)}
+          </span>
+        </td>
+        <td><span style="color: var(--text-secondary);">${this.escapeHtml(acc.display_name || "—")}</span></td>
+        <td>
+           <div class="usage-bar-container">
+             <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 500;">
+               <span>${acc.daily_limit || 50} limit</span>
+               <span>${usagePercent}%</span>
+             </div>
+             <div class="usage-bar-outer">
+               <div class="usage-bar-inner" style="width: ${usagePercent}%;"></div>
+             </div>
+           </div>
+        </td>
+        <td><span class="status-badge ${statusClass}">${acc.status === 'Active' ? 'Connected' : acc.status}</span></td>
+        <td>
+          <button class="btn-delete" data-id="${acc.id}" style="padding: 6px; background: none; border: none; color: var(--text-muted); cursor: pointer; transition: var(--transition);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
         </td>
       </tr>
     `;
-  }).join("");
-
-  // Attach delete handlers
-  tbody.querySelectorAll(".btn-delete").forEach((btn) => {
-    btn.addEventListener("click", () => handleDeleteAccount(btn.dataset.id));
-  });
-}
-
-function getProviderIcon(provider) {
-  if (provider === "Gmail") {
-    return `<div class="provider-dot gmail-dot"></div>`;
-  } else if (provider === "Outlook") {
-    return `<div class="provider-dot outlook-dot"></div>`;
   }
-  return `<div class="provider-dot smtp-dot"></div>`;
+
+  updateGmailLink(authUrl) {
+    if (this.elements.gmailLink) this.elements.gmailLink.href = authUrl;
+  }
+
+  closeModal() {
+    if (this.elements.modalOverlay) this.elements.modalOverlay.hidden = true;
+    if (this.elements.smtpForm) this.elements.smtpForm.reset();
+    
+    // Reset modal steps
+    const step1 = document.getElementById("step-choose-provider");
+    const step2 = document.getElementById("step-smtp-form");
+    if (step1) step1.hidden = false;
+    if (step2) step2.hidden = true;
+  }
+
+  showToast(message, type = "info") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+    
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span>${this.escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => toast.classList.add("visible"), 10);
+    setTimeout(() => {
+      toast.classList.remove("visible");
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
 }
 
-// ─── Gmail OAuth ─────────────────────────────────────────────
-async function startGmailOAuth() {
+/**
+ * Controller — Orchestrates Service and UI.
+ */
+async function initApp() {
+  const ui = new AccountUI();
+  
   try {
-    // Get current session token to pass as state
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      showToast("Please log in again.", "error");
-      return;
-    }
+    const session = await requireAuth();
+    if (!session) return;
 
-    // Redirect to our Edge Function that initiates the Google OAuth flow
-    const authUrl = `${SUPABASE_URL}/functions/v1/gmail-auth-start?token=${encodeURIComponent(session.access_token)}`;
-    window.location.href = authUrl;
-  } catch (err) {
-    showToast("Failed to start Gmail connection.", "error");
-    console.error(err);
-  }
-}
+    ui.showApp();
+    const user = await getCurrentUser();
+    ui.renderUserInfo(user);
 
-// ─── Custom SMTP Account Creation ────────────────────────────
-async function handleSmtpSubmit(e) {
-  e.preventDefault();
-  const errorEl = document.getElementById("smtp-error");
-  const submitBtn = document.getElementById("smtp-submit");
-  const btnText = submitBtn.querySelector(".btn-text");
-  const btnLoader = submitBtn.querySelector(".btn-loader");
+    // Initial Load
+    const accounts = await AccountService.fetchAccounts();
+    ui.renderTable(accounts);
 
-  errorEl.hidden = true;
+    // Setup Gmail Link
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://jkmfyuduxhkkrdxcfhbn.supabase.co";
+    const authUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/gmail-auth-start?token=${encodeURIComponent(session.access_token)}`;
+    ui.updateGmailLink(authUrl);
 
-  const email = document.getElementById("smtp-email").value.trim();
-  const displayName = document.getElementById("smtp-display-name").value.trim();
-  const smtpHost = document.getElementById("smtp-host").value.trim();
-  const smtpPort = parseInt(document.getElementById("smtp-port").value);
-  const smtpUsername = document.getElementById("smtp-username").value.trim();
-  const smtpPassword = document.getElementById("smtp-password").value;
-  const imapHost = document.getElementById("imap-host").value.trim();
-  const imapPort = parseInt(document.getElementById("imap-port").value);
-
-  // Validation: check for duplicate email
-  const existing = accounts.find((a) => a.email_address.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    errorEl.textContent = "This email address is already connected.";
-    errorEl.hidden = false;
-    return;
-  }
-
-  submitBtn.disabled = true;
-  btnText.hidden = true;
-  btnLoader.hidden = false;
-
-  try {
-    const { data, error } = await supabase.from("email_accounts").insert({
-      user_id: currentUser.id,
-      email_address: email,
-      display_name: displayName || null,
-      provider: "SMTP",
-      smtp_host: smtpHost,
-      smtp_port: smtpPort,
-      smtp_username: smtpUsername,
-      smtp_password: smtpPassword,
-      imap_host: imapHost,
-      imap_port: imapPort,
-      status: "Active",
-      daily_limit: 50,
-    }).select().single();
-
-    if (error) {
-      // Check for unique constraint
-      if (error.code === "23505") {
-        throw new Error("This email address is already connected.");
+    // Check for Redirect Messages (Success/Error)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("success")) {
+      const successType = urlParams.get("success");
+      if (successType === "gmail") {
+        ui.showToast("Gmail account connected successfully!", "success");
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+        // Refresh list
+        const updatedAccounts = await AccountService.fetchAccounts();
+        ui.renderTable(updatedAccounts);
       }
-      throw error;
+    } else if (urlParams.has("error")) {
+      const errorMsg = urlParams.get("error");
+      ui.showToast(`Connection failed: ${decodeURIComponent(errorMsg)}`, "error");
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    closeModal();
-    showToast("SMTP account connected successfully!", "success");
-    await loadAccounts();
+    // Event Listeners
+    setupEventListeners(ui, session.access_token);
   } catch (err) {
-    errorEl.textContent = err.message || "Failed to add account.";
-    errorEl.hidden = false;
-  } finally {
-    submitBtn.disabled = false;
-    btnText.hidden = false;
-    btnLoader.hidden = true;
+    console.error("Initialization Failed:", err);
+    ui.showApp();
+    ui.showToast("Critical Error: Link to database failed.", "error");
   }
 }
 
-// ─── Delete Account ──────────────────────────────────────────
-async function handleDeleteAccount(accountId) {
-  if (!confirm("Are you sure you want to remove this email account?")) return;
+function setupEventListeners(ui, token) {
+  // Add Account Button
+  document.body.addEventListener("click", async (e) => {
+    // Add Account Button - Show provider selection first
+    if (e.target.closest("#btn-add-account") || e.target.closest("#btn-empty-add")) {
+      document.getElementById("modal-overlay").hidden = false;
+      document.getElementById("step-choose-provider").hidden = false;
+      document.getElementById("step-smtp-form").hidden = true;
+    }
 
-  try {
-    const { error } = await supabase.from("email_accounts").delete().eq("id", accountId);
-    if (error) throw error;
+    if (e.target.closest("#modal-close") || e.target.closest("#smtp-cancel") || e.target.closest("#smtp-close") || e.target === document.getElementById("modal-overlay")) {
+      ui.closeModal();
+    }
 
-    showToast("Account removed.", "success");
-    await loadAccounts();
-  } catch (err) {
-    showToast("Failed to remove account.", "error");
-    console.error(err);
+    // Back to Provider Selection
+    if (e.target.closest("#smtp-back")) {
+      document.getElementById("step-choose-provider").hidden = false;
+      document.getElementById("step-smtp-form").hidden = true;
+    }
+
+    // Provider SMTP Selection
+    if (e.target.closest("#provider-smtp")) {
+       document.getElementById("step-choose-provider").hidden = true;
+       document.getElementById("step-smtp-form").hidden = false;
+    }
+
+    // Gmail Connect
+    if (e.target.closest("#provider-gmail")) {
+       const btn = e.target.closest("#provider-gmail");
+       console.log("🚀 Initiating Gmail OAuth Flow...");
+       
+       // UI Feedback
+       const originalContent = btn.innerHTML;
+       btn.classList.add("active");
+       btn.style.opacity = "0.7";
+       btn.style.pointerEvents = "none";
+       btn.innerHTML = `
+         <div class="loading-spinner-sm" style="width: 20px; height: 20px; border-width: 2px;"></div>
+         <div class="provider-info" style="margin-left: 12px; text-align: left;">
+           <span class="provider-name" style="display: block; font-weight: 600;">Connecting...</span>
+           <span class="provider-type" style="display: block; font-size: 0.75rem; opacity: 0.8;">Redirecting to Google</span>
+         </div>
+       `;
+
+       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://jkmfyuduxhkkrdxcfhbn.supabase.co";
+       const targetUrl = `${SUPABASE_URL.replace(/\/$/, "")}/functions/v1/gmail-auth-start?token=${encodeURIComponent(token)}`;
+       
+       // Small delay to let user see feedback
+       setTimeout(() => {
+         window.location.href = targetUrl;
+       }, 500);
+    }
+
+    // Delete
+    const delBtn = e.target.closest(".btn-delete");
+    if (delBtn) {
+      if (!confirm("Are you sure?")) return;
+      try {
+        await AccountService.deleteAccount(delBtn.dataset.id);
+        ui.showToast("Account removed", "success");
+        const accounts = await AccountService.fetchAccounts();
+        ui.renderTable(accounts);
+      } catch (err) {
+        ui.showToast("Delete failed", "error");
+      }
+    }
+
+    // List Refresh + Sync
+    if (e.target.closest("#btn-refresh-accounts")) {
+      const btn = e.target.closest("#btn-refresh-accounts");
+      
+      console.log("🔄 Refreshing accounts list and triggering background sync...");
+      btn.classList.add("spinning");
+      ui.showToast("Refreshing accounts...", "info");
+
+      try {
+        const accounts = await AccountService.fetchAccounts();
+        ui.renderTable(accounts);
+        
+        // Trigger background sync for all Gmail accounts
+        const gmailAccounts = accounts.filter(a => a.refresh_token);
+        if (gmailAccounts.length > 0) {
+          console.log(`[SYNC] Triggering sync for ${gmailAccounts.length} Gmail accounts...`);
+          const token = (await supabase.auth.getSession()).data.session?.access_token;
+          
+          // Fire and forget (optional) or wait. Let's fire and forget for UI snappiness
+          gmailAccounts.forEach(account => {
+            supabase.functions.invoke('fetch-gmail-emails', {
+              body: { accountId: account.id },
+              headers: { Authorization: `Bearer ${token}` }
+            }).then(({error}) => {
+               if (error) console.error(`[SYNC_ERROR] ${account.email_address}:`, error);
+               else console.log(`[SYNC_SUCCESS] ${account.email_address}`);
+            });
+          });
+          ui.showToast("Background sync started for Gmail accounts.", "info");
+        }
+      } catch (err) {
+        ui.showToast("Failed to refresh: " + err.message, "error");
+      } finally {
+        setTimeout(() => btn.classList.remove("spinning"), 1000);
+      }
+    }
+
+    // Close Modal
+    if (e.target.closest("#modal-close") || e.target.closest("#smtp-close")) {
+      ui.closeModal();
+    }
+
+    // Close Modal
+    if (e.target.closest(".modal-close")) {
+      ui.closeModal();
+    }
+
+    // Test SMTP
+    if (e.target.closest("#btn-test-smtp")) {
+      const btn = e.target.closest("#btn-test-smtp");
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = "Testing...";
+
+      try {
+        const host = document.getElementById("smtp-host");
+        const port = document.getElementById("smtp-port");
+        const user = document.getElementById("smtp-user");
+        const pass = document.getElementById("smtp-pass");
+        const encryption = document.getElementById("smtp-encryption");
+
+        console.log("Debug - Test SMTP Fields:", {
+          host: host ? host.value : null,
+          port: port ? port.value : null,
+          user: user ? user.value : null,
+          pass: pass ? (pass.value ? "[HIDDEN]" : null) : null,
+          encryption: encryption ? encryption.value : null
+        });
+
+        const payload = {
+          host: host.value,
+          port: parseInt(port.value),
+          user: user.value,
+          pass: pass.value,
+          encryption: encryption.value
+        };
+
+        await AccountService.testSmtpConnection(payload);
+        ui.showToast("Connection Successful!", "success");
+      } catch (err) {
+        ui.showToast(`Test Failed: ${err.message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // Logout
+    if (e.target.closest("#logout-btn")) {
+       await signOut();
+    }
+  });
+
+  // SMTP Form logic
+  const smtpForm = document.getElementById("smtp-form");
+  if (smtpForm) {
+    smtpForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const saveBtn = document.getElementById("btn-save-smtp");
+      saveBtn.disabled = true;
+
+      try {
+        const emailField = document.getElementById("smtp-user");
+        const nameField = document.getElementById("display-name");
+        const hostField = document.getElementById("smtp-host");
+        const portField = document.getElementById("smtp-port");
+        const encField = document.getElementById("smtp-encryption");
+        const passField = document.getElementById("smtp-pass");
+        const imapHostField = document.getElementById("imap-host");
+        const imapPortField = document.getElementById("imap-port");
+
+        console.log("Debug - Save Account Fields:", {
+          email: emailField ? emailField.value : null,
+          display_name: nameField ? nameField.value : null,
+          smtp_host: hostField ? hostField.value : null,
+          smtp_port: portField ? portField.value : null,
+          imap_host: imapHostField ? imapHostField.value : null,
+          imap_port: imapPortField ? imapPortField.value : null
+        });
+
+        const payload = {
+          user_id: (await getCurrentUser()).id,
+          email_address: emailField.value,
+          display_name: nameField.value,
+          smtp_host: hostField.value,
+          smtp_port: parseInt(portField.value),
+          smtp_encryption: encField.value,
+          smtp_username: emailField.value,
+          smtp_password: passField.value,
+          imap_host: imapHostField.value,
+          imap_port: parseInt(imapPortField.value),
+          imap_username: emailField.value,
+          imap_password: passField.value,
+          provider: "SMTP",
+          status: "Active",
+          daily_limit: 50
+        };
+
+        await AccountService.createSmtpAccount(payload);
+        ui.closeModal();
+        ui.showToast("Account connected successfully!", "success");
+        
+        const accounts = await AccountService.fetchAccounts();
+        ui.renderTable(accounts);
+      } catch (err) {
+        ui.showToast(`Failed to save: ${err.message}`, "error");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
   }
 }
 
-// ─── Modal Logic ─────────────────────────────────────────────
-function openModal() {
-  document.getElementById("modal-overlay").hidden = false;
-  showStep("step-choose-provider");
-  document.body.style.overflow = "hidden";
-}
-
-function closeModal() {
-  document.getElementById("modal-overlay").hidden = true;
-  document.body.style.overflow = "";
-  // Reset SMTP form
-  document.getElementById("smtp-form").reset();
-  document.getElementById("smtp-error").hidden = true;
-}
-
-function showStep(stepId) {
-  document.querySelectorAll(".modal-step").forEach((s) => (s.hidden = true));
-  document.getElementById(stepId).hidden = false;
-}
-
-// ─── Toast Notifications ─────────────────────────────────────
-function showToast(message, type = "info") {
-  const container = document.getElementById("toast-container");
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-
-  const icon = type === "success"
-    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>`
-    : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
-
-  toast.innerHTML = `${icon}<span>${escapeHtml(message)}</span>`;
-  container.appendChild(toast);
-
-  // Animate in
-  requestAnimationFrame(() => toast.classList.add("visible"));
-
-  // Auto-remove
-  setTimeout(() => {
-    toast.classList.remove("visible");
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-}
-
-// ─── Utilities ───────────────────────────────────────────────
-function escapeHtml(str) {
-  if (!str) return "";
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-// ─── Event Listeners ─────────────────────────────────────────
-function initEventListeners() {
-  // Open modal buttons
-  document.getElementById("btn-add-account").addEventListener("click", openModal);
-  const emptyBtn = document.getElementById("btn-empty-add");
-  if (emptyBtn) emptyBtn.addEventListener("click", openModal);
-
-  // Close modal
-  document.getElementById("modal-close").addEventListener("click", closeModal);
-  document.getElementById("modal-overlay").addEventListener("click", (e) => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-
-  // Provider selection
-  document.getElementById("provider-gmail").addEventListener("click", startGmailOAuth);
-  document.getElementById("provider-outlook").addEventListener("click", () => {
-    showToast("Outlook integration is coming soon!", "info");
-  });
-  document.getElementById("provider-smtp").addEventListener("click", () => {
-    showStep("step-smtp-form");
-  });
-
-  // SMTP form
-  document.getElementById("smtp-back").addEventListener("click", () => {
-    showStep("step-choose-provider");
-  });
-  document.getElementById("smtp-cancel").addEventListener("click", closeModal);
-  document.getElementById("smtp-close").addEventListener("click", closeModal);
-  document.getElementById("smtp-form").addEventListener("submit", handleSmtpSubmit);
-
-  // Logout
-  document.getElementById("logout-btn").addEventListener("click", async () => {
-    await signOut();
-  });
-
-  // Keyboard shortcuts
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
-  });
-}
-
-// ─── Init ────────────────────────────────────────────────────
-initPage();
+initApp();

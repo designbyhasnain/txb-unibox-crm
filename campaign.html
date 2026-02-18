@@ -1,86 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Campaign Details - TXB UniBox CRM</title>
-    <link rel="stylesheet" href="/src/styles/app.css" />
-    <link rel="stylesheet" href="/src/styles/campaign.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <div id="auth-loading" class="auth-loading">
-      <div class="loader"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaign Details — TXB UniBox CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <link rel="stylesheet" href="/src/styles/campaign.css" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Loading screen -->
+  <div id="auth-loading" class="auth-loading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Authenticating...</p>
     </div>
+  </div>
 
-    <div class="app-container" style="display: none" id="app-content">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">
-          <div class="logo-icon">
-            <!-- Reuse logo svg -->
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+  <!-- App shell (hidden until authenticated) -->
+  <div id="app-shell" class="app-shell" hidden>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="/campaigns.html" class="nav-item active" id="nav-campaigns">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Campaigns</span>
+        </a>
+        <a href="#leads" class="nav-item" id="nav-leads">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
+        </a>
+        <a href="/accounts.html" class="nav-item" id="nav-accounts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          <span>Email Accounts</span>
+        </a>
+        <a href="#warmup" class="nav-item" id="nav-warmup">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+          <span>Warmup</span>
+        </a>
+        <a href="#analytics" class="nav-item" id="nav-analytics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          <span>Analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile" id="user-profile">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="user-name">Loading...</span>
+            <span class="user-email" id="user-email">...</span>
           </div>
-          <span>TXB UniBox</span>
         </div>
+        <button id="logout-btn" class="btn-logout" title="Sign out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16,17 21,12 16,7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
 
-        <nav class="nav-menu">
-          <a href="/" class="nav-item">
-            <span class="nav-icon">🏠</span> Dashboard
-          </a>
-          <a href="/campaigns.html" class="nav-item active">
-            <span class="nav-icon">🚀</span> Campaigns
-          </a>
-          <a href="#leads" class="nav-item">
-            <span class="nav-icon">👥</span> Leads
-          </a>
-          <a href="/accounts.html" class="nav-item">
-            <span class="nav-icon">📧</span> Email Accounts
-          </a>
-          <a href="#analytics" class="nav-item">
-            <span class="nav-icon">📊</span> Analytics
-          </a>
-          <a href="#settings" class="nav-item">
-            <span class="nav-icon">⚙️</span> Settings
-          </a>
-        </nav>
-
-        <div class="user-profile">
-            <div class="avatar" id="user-avatar">?</div>
-            <div class="user-info">
-              <div class="user-name" id="user-name">Loading...</div>
-              <div class="user-email" id="user-email">...</div>
-            </div>
-            <button class="logout-btn" id="logout-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-            </button>
-        </div>
-      </aside>
-
-      <!-- Main Content -->
-      <main class="main-content">
-        <header class="campaign-header">
-           <div class="header-left">
-               <a href="/campaigns.html" class="back-link">← Back to Campaigns</a>
-               <h1 id="campaign-title">Loading...</h1>
-               <div id="campaign-status-badge" class="status-badge">...</div>
-           </div>
-           <div class="header-right">
-               <button class="icon-btn" title="Refresh">
-                   <span class="icon">↻</span>
-               </button>
-               <button class="primary-btn" id="save-changes-btn" style="display:none">Save Changes</button>
-           </div>
-        </header>
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="content-header">
+         <div class="header-left">
+             <a href="/campaigns.html" class="back-link">← Back to Campaigns</a>
+             <h1 id="campaign-title">Loading...</h1>
+             <div id="campaign-status-badge" class="status-badge">...</div>
+         </div>
+         <div class="header-right">
+             <button class="icon-btn" title="Refresh">
+                 <span class="icon">↻</span>
+             </button>
+             <button class="btn-primary" id="save-changes-btn" style="display:none">Save Changes</button>
+         </div>
+      </header>
 
         <!-- Tabs -->
         <div class="tabs-container">
@@ -118,11 +136,38 @@
                 <!-- Leads Tab -->
                 <div id="tab-leads" class="tab-pane">
                     <div class="leads-header">
-                        <h2>Leads</h2>
-                        <button class="secondary-btn" id="import-leads-btn">+ Import Leads (CSV)</button>
+                        <h2>Leads <span id="leads-count" class="count-badge">0</span></h2>
+                        <button class="secondary-btn" id="import-leads-btn">
+                            <span class="icon">📥</span> Import CSV
+                        </button>
                     </div>
-                    <div class="empty-placeholder">
+                    
+                    <div id="leads-loading" class="loading-state" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Loading leads...</p>
+                    </div>
+
+                    <div id="leads-empty" class="empty-placeholder">
+                        <div class="empty-icon">👥</div>
                         <p>No leads added to this campaign yet.</p>
+                        <button class="text-btn" id="import-leads-link">Upload a CSV file</button>
+                    </div>
+
+                    <div class="table-responsive" id="leads-table-container" style="display: none;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Name</th>
+                                    <th>Company</th>
+                                    <th>Status</th>
+                                    <th>Added</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-list">
+                                <!-- Leads injected here -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -156,9 +201,48 @@
       </main>
     </div>
 
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Import Leads from CSV</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="import-step-1">
+                    <div class="upload-area" id="upload-area">
+                        <input type="file" id="csv-file-input" accept=".csv" hidden>
+                        <div class="upload-icon">📄</div>
+                        <p>Click to upload or drag and drop CSV</p>
+                        <span class="sub-text">Recommended columns: email, first_name, company</span>
+                    </div>
+                </div>
+
+                <div id="import-step-2" style="display: none;">
+                    <h3>Map Columns</h3>
+                    <p class="mapping-desc">Match your CSV columns to lead fields.</p>
+                    
+                    <div class="mapping-grid" id="mapping-grid">
+                        <!-- Mapping rows injected here -->
+                    </div>
+
+                    <div class="import-stats">
+                        <span>Found: <strong id="total-rows-count">0</strong> rows</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="cancel-btn close-modal-btn">Cancel</button>
+                <button class="primary-btn" id="start-import-btn" disabled>Import Leads</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script type="module" src="/src/pages/campaign.js"></script>
   </body>
 </html>
