@@ -6,11 +6,13 @@ export default defineConfig({
   build: {
     outDir: "dist",
     rollupOptions: {
-      input: {
-        main: "index.html",
-        login: "login.html",
-        accounts: "accounts.html",
-      },
+        input: {
+          main: "index.html",
+          login: "login.html",
+          accounts: "accounts.html",
+          campaigns: "campaigns.html",
+          campaign: "campaign.html",
+        },
     },
   },
   server: {
