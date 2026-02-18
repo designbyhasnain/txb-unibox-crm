@@ -1,19 +1,29 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
-const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
 
-// The frontend URL to redirect back to after OAuth
-const FRONTEND_URL = Deno.env.get("FRONTEND_URL") || "http://localhost:3000";
+// Helper: fetch multiple config values from app_config table
+async function getConfigs(...keys: string[]): Promise<Record<string, string>> {
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await supabaseAdmin
+    .from("app_config")
+    .select("key, value")
+    .in("key", keys);
+  if (error) throw new Error(`Failed to load config: ${error.message}`);
+  const config: Record<string, string> = {};
+  for (const row of data || []) config[row.key] = row.value;
+  for (const key of keys) {
+    if (!config[key]) throw new Error(`Missing config: ${key}`);
+  }
+  return config;
+}
 
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -25,13 +35,23 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // Load all config from app_config table
+  let config: Record<string, string>;
+  try {
+    config = await getConfigs("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "FRONTEND_URL");
+  } catch (err) {
+    console.error("Config load error:", err);
+    return new Response("Server configuration error.", { status: 500 });
+  }
+
+  const FRONTEND_URL = config.FRONTEND_URL || "http://localhost:3000";
+
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const stateParam = url.searchParams.get("state");
     const errorParam = url.searchParams.get("error");
 
-    // Handle Google errors (user denied access etc.)
     if (errorParam) {
       return Response.redirect(
         `${FRONTEND_URL}/accounts.html?error=${encodeURIComponent(errorParam)}`,
@@ -46,7 +66,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Decode state to get user info
+    // Decode state
     let state: { token: string; userId: string };
     try {
       state = JSON.parse(atob(stateParam));
@@ -57,7 +77,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify the user's JWT is still valid
+    // Verify user JWT
     const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(state.token);
 
@@ -68,14 +88,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ─── Exchange authorization code for tokens ───────────
+    // Exchange authorization code for tokens
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
+        client_id: config.GOOGLE_CLIENT_ID,
+        client_secret: config.GOOGLE_CLIENT_SECRET,
         redirect_uri: REDIRECT_URI,
         grant_type: "authorization_code",
       }),
@@ -91,9 +111,9 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { access_token, refresh_token, expires_in } = tokenData;
+    const { access_token, refresh_token } = tokenData;
 
-    // ─── Get the Gmail user info ──────────────────────────
+    // Get Gmail user info
     const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
       headers: { Authorization: `Bearer ${access_token}` },
     });
@@ -109,7 +129,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ─── Check for duplicate email ────────────────────────
+    // Check for duplicate
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: existing } = await supabaseAdmin
@@ -132,13 +152,10 @@ Deno.serve(async (req: Request) => {
         })
         .eq("id", existing.id);
 
-      return Response.redirect(
-        `${FRONTEND_URL}/accounts.html?success=gmail`,
-        302
-      );
+      return Response.redirect(`${FRONTEND_URL}/accounts.html?success=gmail`, 302);
     }
 
-    // ─── Insert new email account ─────────────────────────
+    // Insert new email account
     const { error: insertError } = await supabaseAdmin
       .from("email_accounts")
       .insert({
@@ -164,10 +181,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    return Response.redirect(
-      `${FRONTEND_URL}/accounts.html?success=gmail`,
-      302
-    );
+    return Response.redirect(`${FRONTEND_URL}/accounts.html?success=gmail`, 302);
   } catch (err) {
     console.error("gmail-auth-callback error:", err);
     return Response.redirect(

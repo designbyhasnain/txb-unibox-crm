@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/gmail-auth-callback`;
@@ -14,8 +14,19 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
 ].join(" ");
 
+// Helper: fetch a config value from app_config table
+async function getConfig(key: string): Promise<string> {
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const { data, error } = await supabaseAdmin
+    .from("app_config")
+    .select("value")
+    .eq("key", key)
+    .single();
+  if (error || !data) throw new Error(`Missing config: ${key}`);
+  return data.value;
+}
+
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -43,7 +54,10 @@ Deno.serve(async (req: Request) => {
       return new Response("Invalid or expired token. Please log in again.", { status: 401 });
     }
 
-    // Build Google OAuth URL with user's JWT as state
+    // Read Google Client ID from app_config table
+    const GOOGLE_CLIENT_ID = await getConfig("GOOGLE_CLIENT_ID");
+
+    // Build Google OAuth URL
     const state = btoa(JSON.stringify({ token, userId: user.id }));
 
     const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
