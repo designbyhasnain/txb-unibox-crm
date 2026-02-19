@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analytics — TXB UniBox CRM</title>
+  <meta name="description" content="Track your campaign performance" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/Layer_1.png" />
+  <link rel="stylesheet" href="/src/styles/app.css" />
+  <link rel="stylesheet" href="/src/styles/analytics.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-gradient"></div>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Loading screen -->
+  <div id="auth-loading" class="auth-loading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Loading Analytics...</p>
+    </div>
+  </div>
+
+  <!-- App shell (hidden until authenticated) -->
+  <div id="app-shell" class="app-shell" hidden>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <img src="/Layer_1.png" alt="TXB UniBox" class="sidebar-logo-img">
+          <span class="logo-text">TXB UniBox</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/" class="nav-item" id="nav-dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="/campaigns.html" class="nav-item" id="nav-campaigns">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Campaigns</span>
+        </a>
+        <a href="#leads" class="nav-item" id="nav-leads">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <span>Leads</span>
+        </a>
+        <a href="/unibox.html" class="nav-item" id="nav-unibox">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span>Unibox</span>
+        </a>
+        <a href="/accounts.html" class="nav-item" id="nav-accounts">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/></svg>
+          <span>Email Accounts</span>
+        </a>
+        <a href="#warmup" class="nav-item" id="nav-warmup">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+          <span>Warmup</span>
+        </a>
+        <a href="/analytics.html" class="nav-item active" id="nav-analytics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          <span>Analytics</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile" id="user-profile">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="user-name">Loading...</span>
+            <span class="user-email" id="user-email">...</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="btn-logout" title="Sign out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+            <polyline points="16,17 21,12 16,7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content" style="max-width: 100%;">
+      <header class="content-header" style="justify-content: space-between; align-items: center; padding-bottom: 20px; border: none;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--text-main); margin: 0;">Analytics</h1>
+        </div>
+        <div class="header-right" style="display: flex; gap: 10px;">
+          <button class="btn-secondary btn-icon-text">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+          <button class="btn-secondary btn-icon-text">
+            Filter
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div class="dropdown-wrapper">
+             <select class="btn-secondary" style="padding-right: 30px; appearance: none; -webkit-appearance: none; cursor: pointer;">
+               <option>Last 7 days</option>
+               <option>Last 30 days</option>
+             </select>
+             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; right: 10px; top: 10px; pointer-events: none;"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+          <button class="btn-secondary btn-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="analytics-dashboard">
+        <div class="analytics-main-card">
+          <!-- KPI Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-title"><span class="kpi-dot" style="background: #eab308;"></span> Total sent</div>
+                <div class="kpi-icon" title="Total sent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              </div>
+              <div class="kpi-value" id="kpi-sent">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-title"><span class="kpi-dot" style="background: #3b82f6;"></span> Open rate</div>
+                <div class="kpi-icon" title="Open rate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              </div>
+              <div class="kpi-value" id="kpi-open">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-title"><span class="kpi-dot" style="background: #4b5563;"></span> Click rate</div>
+                <div class="kpi-icon" title="Click rate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              </div>
+              <div class="kpi-value" id="kpi-click">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-title"><span class="kpi-dot" style="background: #8b5cf6;"></span> Reply rate</div>
+                <div class="kpi-icon" title="Reply rate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              </div>
+              <div class="kpi-value" id="kpi-reply">0</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <div class="kpi-title"><span class="kpi-dot" style="background: #10b981;"></span> Opportunities</div>
+                <div class="kpi-icon" title="Opportunities"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+              </div>
+              <div class="kpi-value"><span id="kpi-opportunities">0</span> <span style="font-weight:400;font-size:1.5rem;color:var(--text-muted)">| $0</span></div>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div class="chart-container">
+            <div class="chart-body">
+              <canvas id="analyticsChart"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Bottom Tabs -->
+        <div class="analytics-tabs-section">
+          <div class="analytics-tabs">
+            <button class="analytics-tab active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Campaign Analytics</button>
+            <button class="analytics-tab"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Account Analytics</button>
+          </div>
+          
+          <div class="tab-content" id="campaign-analytics-content">
+            <h3 class="tab-title">Campaign analytics</h3>
+            <div class="empty-state-card">
+              <span style="display:inline-block; font-size:1.2rem; margin-right:8px;">👋</span> Your published campaigns will appear here
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="/src/pages/analytics.js"></script>
+</body>
+</html>

@@ -58,6 +58,10 @@ class UniboxUI {
     this.bgSyncInterval = null;
     this.realtimeChannel = null;
 
+    // Pagination
+    this.currentPage = 1;
+    this.itemsPerPage = 15;
+
     // Mutable ref object so modules can push/filter without losing the reference
     this.currentHistoryRef = { value: [] };
 
@@ -244,9 +248,16 @@ class UniboxUI {
   }
 
   // ── Thread list rendering ──────────────────────────────────────────────────
-  renderThreadList(messages) {
+  renderThreadList(messages, resetPage = true) {
     this.replies = messages;
     if (!this.elements.threadList) return;
+
+    if (resetPage) this.currentPage = 1;
+
+    const paginationEl = document.getElementById("unibox-pagination");
+    const prevBtn = document.getElementById("btn-prev-page");
+    const nextBtn = document.getElementById("btn-next-page");
+    const pageInfo = document.getElementById("page-info");
 
     if (messages.length === 0) {
       this.elements.threadList.innerHTML = `
@@ -258,10 +269,17 @@ class UniboxUI {
           <p style="font-size: 0.8rem; margin-top: 0.5rem;">Try adjusting your filters or search term.</p>
         </div>
       `;
+      if (paginationEl) paginationEl.style.display = 'none';
       return;
     }
 
-    this.elements.threadList.innerHTML = messages.map(msg => {
+    const totalPages = Math.ceil(messages.length / this.itemsPerPage) || 1;
+    if (this.currentPage > totalPages) this.currentPage = totalPages;
+
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const itemsToRender = messages.slice(startIndex, startIndex + this.itemsPerPage);
+
+    this.elements.threadList.innerHTML = itemsToRender.map(msg => {
       // Resolve status: prefer linked lead status, then reply tag
       const status = msg.lead?.status || msg.tags?.status || null;
       const chipHtml = getStatusChipHtml(status);
@@ -279,6 +297,27 @@ class UniboxUI {
         ${chipHtml ? `<div class="thread-status-row">${chipHtml}</div>` : ''}
       </div>`;
     }).join("");
+
+    if (paginationEl && prevBtn && nextBtn && pageInfo) {
+      if (messages.length <= this.itemsPerPage) {
+        paginationEl.style.display = 'none';
+      } else {
+        paginationEl.style.display = 'flex';
+        pageInfo.textContent = `Page ${this.currentPage} of ${totalPages}`;
+        prevBtn.disabled = this.currentPage === 1;
+        nextBtn.disabled = this.currentPage === totalPages;
+      }
+    }
+  }
+
+  changePage(delta) {
+    const totalPages = Math.ceil(this.replies.length / this.itemsPerPage) || 1;
+    const newPage = this.currentPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+      this.currentPage = newPage;
+      this.renderThreadList(this.replies, false);
+      this.elements.threadList.scrollTop = 0;
+    }
   }
 
   renderCampaigns(campaigns) {
@@ -431,7 +470,7 @@ function setupEventListeners(ui) {
       (r.subject?.toLowerCase().includes(term)) ||
       (r.snippet?.toLowerCase().includes(term))
     );
-    ui.renderThreadList(filtered);
+    ui.renderThreadList(filtered, true); // True to reset to page 1 on search
   });
 
   // 5. Click delegation for dynamic elements
@@ -543,6 +582,12 @@ function setupEventListeners(ui) {
         syncAllBtn.classList.remove("spinning");
       }
     }
+
+    // Pagination Clicks
+    const prevBtn = e.target.closest("#btn-prev-page");
+    const nextBtn = e.target.closest("#btn-next-page");
+    if (prevBtn && !prevBtn.disabled) ui.changePage(-1);
+    if (nextBtn && !nextBtn.disabled) ui.changePage(1);
 
     // Thread Item Click
     const threadItem = e.target.closest(".thread-item");
