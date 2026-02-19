@@ -4,7 +4,7 @@ import { supabase } from "./supabase.js";
  * Auth Guard — Checks if user is logged in.
  */
 export async function requireAuth() {
-  console.log("🕵️ Checking authentication...");
+  // Silent check
   
   // 1. Check for tokens in the URL fragment (Magic Link / OAuth responses)
   const isRedirect = window.location.hash.includes("access_token=") || 

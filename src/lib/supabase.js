@@ -9,8 +9,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-console.log("🔥 Initializing Supabase Client...");
-console.log("🔗 URL:", supabaseUrl);
+// Silence verbose initialization logs in production/clean console
+// console.log("🔥 Initializing Supabase Client...");
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
