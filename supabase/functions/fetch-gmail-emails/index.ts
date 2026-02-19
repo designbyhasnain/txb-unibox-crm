@@ -7,6 +7,7 @@ import { simpleParser } from "npm:mailparser";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 async function getOAuthToken(supabase: any, account: any) {
@@ -87,28 +88,41 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { accountId } = await req.json();
-    console.log(`[SYNC_START] Request for Account ID: ${accountId}`);
+    // SECURITY: Get User from JWT (SEC-01)
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error("Missing Authorization header");
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+        console.error("[AUTH_ERR] User verification failed:", authError);
+        throw new Error("UNAUTHORIZED");
+    }
+
+    const { accountId, limit = 10 } = await req.json();
+    console.log(`[SYNC_START] User: ${user.id}, Account: ${accountId}, Limit: ${limit}`);
+    
     if (!accountId) {
         throw new Error("MISSING_ACCOUNT_ID");
     }
 
-    // 1. Get Account Details
+    // 1. Get Account (LOG-01 ownership check)
     const { data: account, error: accError } = await supabase
       .from("email_accounts")
       .select("*")
       .eq("id", accountId)
+      .eq("user_id", user.id)
       .single();
 
     if (accError || !account) {
-        throw new Error("ACCOUNT_NOT_FOUND");
+        throw new Error("ACCOUNT_NOT_FOUND_OR_FORBIDDEN");
     }
 
     let authConfig: any = {};
     const isGmail = account.provider === "Gmail";
 
     if (isGmail && account.refresh_token) {
-        console.log(`[AUTH] Using OAuth2 for Gmail: ${account.email_address}`);
+        console.log(`[AUTH] OAuth2 Refresh for ${account.email_address}`);
         const accessToken = await getOAuthToken(supabase, account);
         authConfig = {
             user: account.email_address,
@@ -141,167 +155,254 @@ serve(async (req: Request) => {
         throw new Error(`CONN_FAILED: ${connErr.message}`);
     }
     
-    // 2. Fetch INBOX
-    let lock;
-    try {
-        lock = await client.getMailboxLock("INBOX");
-    } catch (e) {
-        throw new Error("MAILBOX_INBOX_LOCKED");
-    }
+    const syncStats = {
+      inboxProcessed: 0,
+      sentProcessed: 0,
+      errors: [] as string[]
+    };
 
     try {
-      const totalMessages = client.mailbox.exists;
-      const startRange = Math.max(1, totalMessages - 49);
-      const range = `${startRange}:*`;
-      
-      console.log(`[SYNC_RANGE] Fetching INBOX range ${range}`);
-
-      const messages = await client.fetch(range, {
-        envelope: true,
-        source: true,
-        uid: true,
-        // Gmail specific extensions
-        ...(isGmail ? { "x-gm-thrid": true, "x-gm-labels": true } : {})
-      });
-
-      let count = 0;
-      for await (let msg of messages) {
-        count++;
-        const parsed = await simpleParser(msg.source);
-        const fromEmail = msg.envelope.from[0]?.address || "";
-        const msgId = msg.envelope.messageId;
-        const threadId = (msg as any).xGmThrid;
-        const labels = (msg as any).xGmLabels; // Array of strings
-
-        // Skip if sender is the account itself or missing info
-        if (!fromEmail || fromEmail.toLowerCase() === account.email_address.toLowerCase()) continue;
-
-        const { data: lead } = await supabase
-          .from("leads")
-          .select("id, campaign_id")
-          .eq("email", fromEmail)
-          .single();
-
-        const { error: upsertErr } = await supabase.from("replies").upsert({
-          user_id: account.user_id,
-          email_account_id: account.id,
-          lead_id: lead?.id,
-          campaign_id: lead?.campaign_id,
-          message_id: msgId,
-          subject: msg.envelope.subject,
-          body_text: parsed.text,
-          body_html: parsed.html,
-          snippet: parsed.text?.substring(0, 150),
-          from_email: fromEmail,
-          from_name: msg.envelope.from[0]?.name,
-          to_email: account.email_address,
-          received_at: msg.envelope.date,
-          is_read: false,
-          thread_id: threadId,
-          labels: labels ? Array.from(labels) : null
-        }, { onConflict: 'message_id' });
-
-        if (upsertErr) console.error(`[ERR_DB_UPSERT_REPLY]`, upsertErr);
+      // 2. Fetch INBOX
+      let lock;
+      try {
+          lock = await client.getMailboxLock("INBOX");
+      } catch (e) {
+          throw new Error("MAILBOX_INBOX_LOCKED");
       }
-      console.log(`[SYNC_COMPLETE_INBOX] Synced ${count} messages`);
-    } finally {
-      lock.release();
-    }
 
-    // 3. Fetch Sent Mail
-    let sentMailbox = isGmail ? '[Gmail]/Sent Mail' : 'Sent';
-    try {
-        lock = await client.getMailboxLock(sentMailbox);
-    } catch (e) {
-        if (isGmail) {
-            try { lock = await client.getMailboxLock('Sent'); sentMailbox = 'Sent'; } catch(e2) { sentMailbox = ''; }
-        } else {
-             sentMailbox = '';
-        }
-    }
+      try {
+        const totalMessages = client.mailbox.exists;
+        const fetchCount = Math.min(limit, 10); 
+        const startRange = Math.max(1, totalMessages - fetchCount + 1);
+        const range = `${startRange}:*`;
+        
+        console.log(`[SYNC_RANGE] Fetching INBOX envelopes for range ${range}`);
 
-    if (sentMailbox) {
-        try {
-          const totalSent = client.mailbox.exists;
-          const startSentRange = Math.max(1, totalSent - 49);
-          const sentRange = `${startSentRange}:*`;
-          
-          const sentMessages = await client.fetch(sentRange, {
-            envelope: true,
-            source: true,
-            ...(isGmail ? { "x-gm-thrid": true, "x-gm-labels": true } : {})
-          });
+        const msgList = await client.fetch(range, {
+          envelope: true,
+          uid: true,
+          ...(isGmail ? { "x-gm-thrid": true, "x-gm-labels": true } : {})
+        });
 
-          let sentCount = 0;
-          for await (let msg of sentMessages) {
-            sentCount++;
-            const toEmail = (msg.envelope.to && msg.envelope.to[0].address) || "";
+        const upsertBatch = [];
+
+        for await (let msg of msgList) {
+          try {
+            const fromEmail = msg.envelope.from[0]?.address || "";
+            if (!fromEmail || fromEmail.toLowerCase() === account.email_address.toLowerCase()) continue;
+
+            // RE-FETCH individual source with size check if possible, or just tight try-catch
+            console.log(`[SYNC_INBOX] Fetching UID ${msg.uid} (${fromEmail})`);
+            
+            let sourceData = "";
+            try {
+                const sourceFetch = await client.fetch(msg.uid.toString(), { source: true }, { uid: true });
+                for await (let s of sourceFetch) {
+                    sourceData = s.source.toString();
+                }
+            } catch (fetchErr) {
+                console.warn(`[SYNC_WARN] Failed to fetch source for UID ${msg.uid}:`, fetchErr);
+                continue;
+            }
+
+            if (!sourceData) continue;
+
+            // Step 1: Resilient Parsing
+            let parsed;
+            try {
+                parsed = await simpleParser(sourceData);
+            } catch (parseErr) {
+                console.error(`[SYNC_PARSE_ERR] Failed to parse UID ${msg.uid}. Skipping heavy email.`);
+                continue;
+            }
+
             const msgId = msg.envelope.messageId;
             const threadId = (msg as any).xGmThrid;
             const labels = (msg as any).xGmLabels;
 
-            if (!toEmail) continue;
-
             const { data: lead } = await supabase
               .from("leads")
               .select("id, campaign_id")
-              .eq("email", toEmail)
-              .limit(1)
+              .eq("email", fromEmail)
+              .eq("user_id", user.id)
               .maybeSingle();
 
-            // Fetch step if it exists for campaign tracking
-            let stepId = null;
-            if (lead?.campaign_id) {
-                const { data: step } = await supabase
-                    .from("sequences")
-                    .select("id")
-                    .eq("campaign_id", lead.campaign_id)
-                    .order("step_number", { ascending: true })
-                    .limit(1)
-                    .maybeSingle();
-                stepId = step?.id;
+            upsertBatch.push({
+              user_id: account.user_id,
+              email_account_id: account.id,
+              lead_id: lead?.id || null,
+              campaign_id: lead?.campaign_id || null,
+              message_id: msgId,
+              subject: msg.envelope.subject,
+              body_text: parsed.text || parsed.textAsHtml || "",
+              body_html: parsed.html || parsed.textAsHtml || "",
+              snippet: (parsed.text || "").substring(0, 160),
+              from_email: fromEmail,
+              from_name: msg.envelope.from[0]?.name || fromEmail.split('@')[0],
+              to_email: account.email_address,
+              received_at: msg.envelope.date || new Date().toISOString(),
+              is_read: false,
+              thread_id: threadId,
+              labels: labels ? Array.from(labels) : null
+            });
+
+            syncStats.inboxProcessed++;
+
+            // Step 1: Batch of 5
+            if (upsertBatch.length >= 5) {
+                await supabase.from("replies").upsert(upsertBatch, { onConflict: 'message_id' });
+                upsertBatch.length = 0;
             }
-
-            // Always log sent mail (now nullable lead_id/campaign_id supported)
-            await supabase.from("email_logs").upsert({
-                user_id: account.user_id,
-                email_account_id: account.id,
-                lead_id: lead?.id || null,
-                campaign_id: lead?.campaign_id || null,
-                sequence_step_id: stepId,
-                status: 'Sent',
-                message_id: msgId,
-                subject: msg.envelope.subject,
-                sent_at: msg.envelope.date,
-                thread_id: threadId,
-                labels: labels ? Array.from(labels) : null
-            }, { onConflict: 'message_id' });
+          } catch (msgErr: any) {
+            console.error(`[SYNC_MSG_ERR] Msg processing failed:`, msgErr.message);
+            syncStats.errors.push(msgErr.message);
+            continue; 
           }
-          console.log(`[SYNC_COMPLETE_SENT] Synced ${sentCount} sent messages`);
-        } finally {
-          lock.release();
         }
+
+        if (upsertBatch.length > 0) {
+            await supabase.from("replies").upsert(upsertBatch, { onConflict: 'message_id' });
+        }
+      } finally {
+        lock.release();
+      }
+
+      // 3. Fetch Sent Mail
+      let sentMailbox = isGmail ? '[Gmail]/Sent Mail' : 'Sent';
+      try {
+          lock = await client.getMailboxLock(sentMailbox);
+      } catch (e) {
+          if (isGmail) {
+              try { lock = await client.getMailboxLock('Sent'); sentMailbox = 'Sent'; } catch(e2) { sentMailbox = ''; }
+          } else {
+               sentMailbox = '';
+          }
+      }
+
+      if (sentMailbox) {
+          try {
+            const totalSent = client.mailbox.exists;
+            const fetchCountSent = Math.min(limit, 50);
+            const startSentRange = Math.max(1, totalSent - fetchCountSent + 1);
+            const sentRange = `${startSentRange}:*`;
+            
+            console.log(`[SYNC_SENT] Fetching Sent range ${sentRange}`);
+            
+            const sentMsgList = await client.fetch(sentRange, {
+              envelope: true,
+              uid: true,
+              ...(isGmail ? { "x-gm-thrid": true, "x-gm-labels": true } : {})
+            });
+
+            const sentBatch = [];
+
+            for await (let msg of sentMsgList) {
+              try {
+                const toEmail = (msg.envelope.to && msg.envelope.to[0].address) || "";
+                if (!toEmail) continue;
+
+                const msgId = msg.envelope.messageId;
+                const threadId = (msg as any).xGmThrid;
+                const labels = (msg as any).xGmLabels;
+
+                const { data: lead } = await supabase
+                  .from("leads")
+                  .select("id, campaign_id")
+                  .eq("email", toEmail)
+                  .eq("user_id", user.id)
+                  .limit(1)
+                  .maybeSingle();
+
+                let stepId = null;
+                if (lead?.campaign_id) {
+                    const { data: step } = await supabase
+                        .from("sequences")
+                        .select("id")
+                        .eq("campaign_id", lead.campaign_id)
+                        .order("step_number", { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+                    stepId = step?.id;
+                }
+
+                sentBatch.push({
+                    user_id: account.user_id,
+                    email_account_id: account.id,
+                    lead_id: lead?.id || null,
+                    campaign_id: lead?.campaign_id || null,
+                    sequence_step_id: stepId,
+                    status: 'Sent',
+                    message_id: msgId,
+                    to_email: toEmail,
+                    subject: msg.envelope.subject,
+                    sent_at: msg.envelope.date,
+                    thread_id: threadId,
+                    labels: labels ? Array.from(labels) : null
+                });
+
+                syncStats.sentProcessed++;
+
+                if (sentBatch.length >= 5) {
+                   await supabase.from("email_logs").upsert(sentBatch, { onConflict: 'message_id' });
+                   sentBatch.length = 0;
+                }
+              } catch (sentErr: any) {
+                 console.error("[SYNC_SENT_MSG_ERR]", sentErr.message);
+                 syncStats.errors.push(sentErr.message);
+              }
+            }
+            
+            if (sentBatch.length > 0) {
+                await supabase.from("email_logs").upsert(sentBatch, { onConflict: 'message_id' });
+            }
+          } finally {
+            lock.release();
+          }
+      }
+
+      await client.logout();
+      
+      // Update synced status
+      await supabase.from("email_accounts").update({
+        last_synced_at: new Date().toISOString()
+      }).eq("id", accountId as string);
+
+      return new Response(JSON.stringify({ 
+          success: true, 
+          inbox: syncStats.inboxProcessed, 
+          sent: syncStats.sentProcessed 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (err: any) {
+      console.error(`[SYNC_PARTIAL_FAILURE] ${err.message}`);
+      
+      // If we processed anything, return 200 with partialSuccess: true
+      if (syncStats.inboxProcessed > 0 || syncStats.sentProcessed > 0) {
+          return new Response(JSON.stringify({ 
+              success: true, 
+              partial: true, 
+              inbox: syncStats.inboxProcessed, 
+              sent: syncStats.sentProcessed,
+              error: err.message 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+      }
+
+      const statusCode = (err.message.includes("AUTH_")) ? 400 : 500;
+      return new Response(JSON.stringify({ 
+          error: err.message,
+          code: err.message.split(':')[0] 
+      }), {
+        status: statusCode,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    await client.logout();
-    
-    // Update synced status
-    await supabase.from("email_accounts").update({
-      last_synced_at: new Date().toISOString()
-    }).eq("id", accountId as string);
-
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err: any) {
-    console.error(`[SYNC_CRITICAL_FAILURE] ${err.message}`, err);
-    const statusCode = (err.message.includes("AUTH_")) ? 400 : 500;
-    
-    return new Response(JSON.stringify({ 
-        error: err.message,
-        code: err.message.split(':')[0] 
-    }), {
-      status: statusCode,
+  } catch (outerErr: any) {
+    console.error(`[SYNC_CRITICAL_ERR]`, outerErr);
+    return new Response(JSON.stringify({ error: outerErr.message }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

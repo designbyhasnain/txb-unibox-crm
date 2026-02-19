@@ -1,6 +1,6 @@
 :root {
-  --filter-width: 280px;
-  --thread-width: 400px;
+  --filter-width: 220px;
+  --thread-width: 300px;
   --pane-bg: var(--bg-secondary);
   --item-hover: rgba(132, 204, 22, 0.05);
   --item-active: var(--primary-soft);
@@ -48,12 +48,16 @@
 /* Left Pane: Filters Sidebar Overhaul */
 .unibox-filters {
   width: var(--filter-width);
+  min-width: var(--filter-width);
+  flex-shrink: 0;
   border-right: 1px solid var(--border-light);
-  background: var(--bg-main); /* Match main background for unified look */
+  background: var(--bg-main);
   display: flex;
   flex-direction: column;
-  padding: 1rem 0.5rem; /* Add padding to container */
-  gap: 8px;
+  padding: 0.75rem 0.375rem;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-section {
@@ -76,18 +80,21 @@
 .filter-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: 8px;
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.83rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .filter-item:hover {
@@ -115,6 +122,73 @@
 .filter-item[data-status="Interested"] svg { color: #22c55e; }
 .filter-item[data-status="Meeting Booked"] svg { color: #a855f7; }
 .filter-item[data-status="Won"] svg { color: #eab308; }
+
+/* Count badge on filter labels */
+.filter-item,
+.dropdown-item {
+  position: relative;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.filter-item.active .count-badge {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Status chips on thread list items ──────────────────────────────────── */
+.thread-status-row {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+/* Per-status colour variants */
+.status-chip--interested        { background: #dcfce7; color: #15803d; }
+.status-chip--meeting-booked    { background: #dbeafe; color: #1d4ed8; }
+.status-chip--meeting-completed { background: #cffafe; color: #0e7490; }
+.status-chip--won               { background: #fef9c3; color: #a16207; }
+.status-chip--not-interested    { background: #fee2e2; color: #dc2626; }
+.status-chip--lost              { background: #fce7f3; color: #be185d; }
+.status-chip--out-of-office     { background: #ffedd5; color: #c2410c; }
+.status-chip--wrong-person      { background: #f3f4f6; color: #6b7280; }
+.status-chip--replied           { background: #ede9fe; color: #7c3aed; }
+.status-chip--bounced           { background: #fee2e2; color: #991b1b; }
+.status-chip--unsubscribed      { background: #f3f4f6; color: #374151; }
+.status-chip--contacted         { background: #e0f2fe; color: #0369a1; }
+.status-chip--not-contacted     { background: #f9fafb; color: #9ca3af; }
+
 
 /* Global Search Sleek Style */
 .global-search-container {
@@ -212,10 +286,13 @@
 /* Middle Pane: Thread List */
 .unibox-threads {
   width: var(--thread-width);
+  min-width: var(--thread-width);
+  flex-shrink: 0;
   border-right: 1px solid var(--border-light);
   display: flex;
   flex-direction: column;
   background: var(--bg-main);
+  overflow: hidden;
 }
 
 .pane-header-main {
@@ -459,9 +536,11 @@
 /* Right Pane: Content */
 .unibox-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-main);
+  overflow: hidden;
 }
 
 .no-selection {
@@ -487,12 +566,14 @@
 
 /* Active Conversation */
 .conversation-header {
-  padding: 1.5rem 3rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--border-light);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   background: white;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .lead-info h2 {
@@ -527,38 +608,52 @@
 
 .messages-container {
   flex: 1;
-  padding: 2rem 3rem;
+  padding: 1.25rem 1.5rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
   background: white; /* Clean white background for reading */
+  min-width: 0;
 }
 
 .message-bubble {
   width: 100%;
-  max-width: 100%; /* Cover the whole section */
-  padding: 2rem;
+  padding: 1.25rem 1.5rem;
   border-radius: 12px;
-  box-shadow: none; /* Cleaner look without shadow for full-width */
-  border-bottom: 1px solid var(--border-light); /* Separate messages with lines instead */
+  position: relative;
 }
 
 .message-received {
-  align-self: flex-start;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--border-light);
-  border-radius: 0;
-  padding-left: 0;
-  padding-right: 0;
+  background: #fafafa;
+  border: 1px solid #e8eaed;
+  border-left: 3px solid #dadce0;
+}
+
+.message-received .message-meta {
+  color: #3c4043;
 }
 
 .message-sent {
-  align-self: flex-start; /* Also align sent to left for unified reading flow in email */
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow-sm);
+  background: #f0f4ff;
+  border: 1px solid #c5d8fb;
+  border-left: 3px solid #4285f4;
+}
+
+.message-sent .message-meta {
+  color: #174ea6;
+}
+
+.dark-theme .message-received {
+  background: #1e2124;
+  border-color: #3c4043;
+  border-left-color: #5f6368;
+}
+
+.dark-theme .message-sent {
+  background: #1a2744;
+  border-color: #2d4a8a;
+  border-left-color: #4285f4;
 }
 
 
@@ -579,7 +674,7 @@
 /* Editor */
 /* Gmail-style Editor */
 .reply-editor {
-  padding: 1rem 2rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--border-light);
   background: var(--bg-main);
 }
@@ -703,47 +798,87 @@
   display: block;
 }
 
-/* Reference-Perfect Pill Formatting Toolbar */
+/* Apple-Inspired Pill Formatting Toolbar */
 .gmail-formatting-bar.pill-toolbar {
   display: none;
-  background: #eaf1fb;
-  padding: 6px 12px;
-  border-radius: 40px;
-  box-shadow: none; /* Removed heavy shadow for cleaner inside look */
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
   align-items: center;
-  gap: 4px;
-  margin: 0 16px 8px 16px; /* Inside spacing */
+  gap: 2px;
+  margin: 0 16px 0 16px;
+  width: 100%;
+  max-width: calc(100% - 32px);
+  flex-wrap: nowrap; /* Keep it on one refined line */
+  overflow-x: auto; /* Allow scrolling if squished */
+  scrollbar-width: none; /* Firefox */
+  justify-content: flex-start;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  animation: apple-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-sizing: border-box;
+}
+
+.gmail-formatting-bar.pill-toolbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
+@keyframes apple-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.gmail-formatting-bar.pill-toolbar.active,
+.compose-formatting-bar.active {
+  display: flex !important;
+}
+
+.compose-formatting-bar {
+  display: none;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  padding: 6px 16px;
+  border-radius: 99px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  align-items: center;
+  gap: 8px;
+  margin: 10px 16px;
   width: fit-content;
-  border: 1px solid rgba(0,0,0,0.05); /* Subtle border */
-}
-
-.gmail-formatting-bar.pill-toolbar.active {
-  display: flex;
-  animation: fadeIn 0.1s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .fmt-group {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 0 8px;
-  border-right: 1px solid rgba(0,0,0,0.1);
+  padding: 0 6px;
+  border-right: 1px solid rgba(0, 0, 0, 0.05); /* Softer divider */
+  flex-shrink: 0; /* Prevent icons from getting crushed */
+}
+
+.fmt-group:last-child {
+  border-right: none;
 }
 
 .fmt-select {
   border: none;
   background: transparent;
   font-size: 13px;
-  color: #3c4043;
-  padding: 4px;
+  font-weight: 500;
+  color: #1d1d1f;
+  padding: 4px 8px;
   cursor: pointer;
   outline: none;
-  font-family: 'Tahoma', sans-serif;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.fmt-select:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .dark-theme .fmt-select {
@@ -764,7 +899,7 @@
   padding: 0;
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-family: 'Tahoma', sans-serif;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
 }
 
 .gmail-rich-editor:empty:before {
@@ -783,32 +918,82 @@
 }
 
 .fmt-btn {
-  padding: 6px;
-  border-radius: 50%;
+  padding: 5px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #444746;
+  color: #424245;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  transition: background 0.1s;
+  min-width: 28px;
+  height: 28px;
+  transition: all 0.2s;
+  position: relative;
+  user-select: none;
 }
 
 .fmt-btn:hover {
-  background: rgba(0,0,0,0.06);
+  background: rgba(0, 0, 0, 0.06);
+  color: #000;
 }
 
 .fmt-btn.active {
-  background: rgba(0,0,0,0.1);
-  color: #0b57d0;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+}
+
+/* Hidden color input positioned over its trigger button */
+.fmt-color-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  pointer-events: none; /* JS calls .click() on it */
+}
+
+/* Font size select inside toolbar */
+.fmt-size-select {
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d1d1f;
+  padding: 2px 4px;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  border-radius: 6px;
+  transition: background 0.2s;
+  max-width: 52px;
+  text-align: center;
+}
+
+.fmt-size-select:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark-theme .fmt-size-select {
+  color: #e8eaed;
 }
 
 .gmail-editor-body {
-  padding: 12px 16px;
+  padding: 16px 20px;
   min-height: 200px;
-  background: #fff;
+  background: transparent;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  color: #1d1d1f;
+  flex: 1; /* Allow to expand */
+  overflow-y: auto;
+}
+
+.dark-theme .gmail-editor-body {
+  color: #f5f5f7;
 }
 
 .gmail-quoted-trigger {
@@ -860,6 +1045,10 @@
   border-top: 1px solid #f1f3f4;
 }
 
+.compose-modal .gmail-editor-footer {
+  padding: 12px 20px 20px 20px;
+}
+
 .dark-theme .gmail-editor.expanded .gmail-editor-footer {
   border-top-color: #3c4043;
 }
@@ -873,10 +1062,16 @@
 .gmail-send-group {
   display: flex;
   align-items: center;
-  border-radius: 20px;
-  background: #0b57d0;
+  border-radius: 12px;
+  background: #84CC16; /* Apple aesthetic often uses specific brand colors, we maintain Lime Green here per user requested brand color */
   padding: 0 4px;
-  height: 36px;
+  height: 38px;
+  box-shadow: 0 2px 5px rgba(132, 204, 22, 0.3); /* Subtle colored shadow */
+  transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.gmail-send-group:active {
+  transform: scale(0.97);
 }
 
 .gmail-btn-send {
@@ -887,27 +1082,29 @@
   font-weight: 500;
   font-size: 14px;
   cursor: pointer;
+  font-family: inherit;
 }
 
 .send-separator {
   width: 1px;
   height: 20px;
-  background: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.4);
 }
 
 .gmail-btn-send-dropdown {
   background: transparent;
   color: #fff;
   border: none;
-  padding: 0 8px;
+  padding: 0 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
+  border-radius: 0 10px 10px 0;
 }
 
 .gmail-btn-send:hover,
 .gmail-btn-send-dropdown:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(0, 0, 0, 0.08); /* Darker hover for better contrast on green */
 }
 
 .gmail-toolbar-icons {
@@ -926,16 +1123,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   position: relative;
   z-index: 11;
   pointer-events: auto !important;
   user-select: none;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  color: #5f6368;
 }
 
 .toolbar-icon:hover {
-  background: rgba(60,64,67, 0.08);
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d1d1f;
+}
+
+.dark-theme .toolbar-icon {
+  color: #9aa0a6;
+}
+
+.dark-theme .toolbar-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e8eaed;
 }
 
 .btn-icon-small {
@@ -1195,53 +1404,56 @@
   position: fixed;
   bottom: 0;
   right: 80px;
-  width: 560px;
+  width: 580px; /* Slightly wider for elegance */
   max-width: 90vw;
-  height: 600px;
-  max-height: 80vh;
-  background: white;
-  border-radius: 8px 8px 0 0;
-  box-shadow: 0 8px 10px 1px rgba(0,0,0,0.14), 0 3px 14px 2px rgba(0,0,0,0.12), 0 5px 5px -3px rgba(0,0,0,0.2);
+  height: 620px;
+  max-height: 85vh;
+  background: #ffffff;
+  border-radius: 16px 16px 0 0; /* Softer, Apple-like rounded corners */
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Refined, deeper shadow with a simulated 1px border */
   display: none;
   flex-direction: column;
   z-index: 1000;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: 'Roboto', 'Arial', sans-serif;
+  animation: slideUpCompose 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow: hidden; /* Ensure header respects border radius */
 }
 
 .compose-modal.active {
   display: flex;
 }
 
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes slideUpCompose {
+  from { transform: translateY(100%) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 .dark-theme .compose-modal {
-  background: #1e1e1e;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  border: 1px solid #3c4043;
+  background: #1c1c1e; /* deeper Apple dark mode grey */
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* 3. Header */
 .compose-header {
-  padding: 10px 16px;
-  background: #f2f6fc;
-  color: #202124;
-  border-radius: 8px 8px 0 0;
+  padding: 12px 20px;
+  background: rgba(246, 246, 246, 0.85); /* Translucent */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: #1d1d1f;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  height: 40px;
+  height: auto;
+  min-height: 44px;
   flex-shrink: 0;
 }
 
 .dark-theme .compose-header {
-  background: #1e1e1e;
-  color: #e8eaed;
-  border-bottom: 1px solid #3c4043;
+  background: rgba(44, 44, 46, 0.85);
+  color: #f5f5f7;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .compose-title {
@@ -1291,17 +1503,26 @@
 }
 
 .compose-field {
-  border-bottom: 1px solid #f1f3f4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   position: relative;
-  padding: 0 16px;
+  padding: 4px 20px;
   display: flex;
   align-items: center;
-  min-height: 40px;
+  min-height: 48px;
   flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.compose-field:focus-within {
+  background-color: rgba(0, 0, 0, 0.015);
 }
 
 .dark-theme .compose-field {
-  border-bottom-color: #3c4043;
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark-theme .compose-field:focus-within {
+  background-color: rgba(255, 255, 255, 0.015);
 }
 
 .field-label-wrapper {
@@ -1311,14 +1532,15 @@
 }
 
 .field-label {
-  color: #70757a;
+  color: #86868b;
   font-size: 0.95rem;
-  margin-right: 8px;
+  margin-right: 12px;
   cursor: pointer;
+  user-select: none;
 }
 
 .dark-theme .field-label {
-  color: #9aa0a6;
+  color: #98989d;
 }
 
 .compose-input {
@@ -1329,8 +1551,12 @@
   font-family: inherit;
   font-size: 0.95rem;
   background: transparent;
-  color: var(--text-main);
+  color: #1d1d1f;
   min-width: 50px;
+}
+
+.dark-theme .compose-input {
+  color: #f5f5f7;
 }
 
 .compose-cc-bcc {

@@ -14,7 +14,8 @@ A high-end, modern CRM and Cold Outreach platform inspired by Instantly.ai. The 
 - **Edge Functions**:
   - `gmail-auth-start`: Initiates OAuth 2.0 flow for Google.
   - `gmail-auth-callback`: Handles OAuth redirect and stores refresh tokens.
-  - `fetch-gmail-emails`: Performs IMAP sync using `imapflow` to fetch real messages into the database.
+  - `fetch-gmail-emails`: Performs IMAP sync using `gmail-api` or `imapflow` to fetch real messages into the database.
+  - `send-email`: Handles SMTP/Gmail API sending with support for threading (`threadId`, `inReplyTo`).
 
 ## Project Structure
 
@@ -25,8 +26,9 @@ A high-end, modern CRM and Cold Outreach platform inspired by Instantly.ai. The 
   - `campaigns.html` / `campaign.html`: Campaign management.
   - `accounts.html`: Email account configuration.
 - **/src/pages**: Page-specific controllers and UI logic.
-  - `unibox.js`: Complex state management for threads, filters, and global search.
+  - `unibox.js`: Complex state management for threads, filters, and global search (~75KB of logic).
   - `accounts.js`: OAuth flow handling and account status management.
+  - `app.js`: Global sidebar and notification logic.
 - **/src/lib**: Core shared utilities.
   - `supabase.js`: Supabase client initialization.
   - `auth.js`: Auth guards (`requireAuth`), session handling, and profile management.
@@ -41,27 +43,34 @@ A high-end, modern CRM and Cold Outreach platform inspired by Instantly.ai. The 
 
 ### 1. Unified App Navigation
 
-A fixed, premium sidebar (`.app-shell`) used across all pages to ensure session persistence and consistent user flow.
+A fixed, premium sidebar (`.app-shell`) used across all pages to ensure session persistence and consistent user flow. The sidebar maps to Status labels, Campaigns, and Inboxes.
 
 ### 2. The Unibox (Advanced)
 
 - **Multi-Account Sync**: Syncs specific accounts or use "Sync All" to iterate through all connected Gmail accounts.
+- **Unified History**: Shows both received replies and sent outreach logs in a chronologically sorted thread view.
 - **Smart Filtering**:
   - **Folder Logic**: Inbox, Unread, Sent (fetched from `email_logs`).
-  - **Label Logic (Dropdown)**: Filter by Lead Status (Interested, Meeting Booked, Replied, etc.).
+  - **Label Logic**: Filter by Lead Status (Interested, Meeting Booked, Replied, etc.).
 - **Global Search**: Search across _all_ connected accounts and thread histories simultaneously from the master inbox view.
-- **Unified History**: Shows both received replies and sent outreach logs in a chronologically sorted thread view.
-- **Lead Status Automation**: Updating a lead to a terminal status (e.g., "Not Interested", "Won", "Unsubscribed") automatically triggers an update that can be used to stop campaign sequences.
+- **Draft & Real-time**: Uses Supabase Realtime for instant message arrival and background sync (every 30s + on focus).
 
-### 3. Gmail Integration (OAuth 2.0)
+### 3. Professional Compose & Reply
 
-- Moved from legacy App Passwords to secure OAuth 2.0.
-- Users click "Connect Google", authorize via Google's screen, and the app securely stores encrypted tokens for background IMAP/SMTP operations.
+- **Gmail-Clone Editor**: Rich text editing with a floating Apple-inspired "Pill" formatting toolbar.
+- **Lead Autocomplete**: Search leads by name/email while composing to automatically link messages to existing leads.
+- **Threading Support**: Correctly handles `Message-ID`, `References`, and `In-Reply-To` headers via Edge Functions for perfect conversation threading.
 
-### 4. Dashboard Analytics
+### 4. Gmail Integration (OAuth 2.0)
 
-- Real-time stat cards for Campaigns, Leads, Emails Sent, and Reply Rate.
-- "Quick Action" grid for rapid navigation.
+- Secure OAuth 2.0 flow for connecting Google accounts.
+- Proactive token refresh logic in the frontend before sensitive API calls.
+- Encrypted storage of refresh tokens in the `email_accounts` table.
+
+### 5. Automation & Leads
+
+- **Lead Status Flow**: Updating a lead to a terminal status (e.g., "Not Interested", "Won", "Unsubscribed") can be used to stop campaign sequences.
+- **Real-time Stats**: Dashboard tiles showing active campaigns, reply rates, and sync status.
 
 ## Design Tokens (Reference)
 
@@ -72,8 +81,8 @@ A fixed, premium sidebar (`.app-shell`) used across all pages to ensure session 
 - **Border**: `#F3F4F6`
 - **Shadows**: Low-offset, natural shadows with subtle primary-colored glow on active states.
 
-## Future Roadmap (Implicit)
+## Development Workflow
 
-- **Sequence Builder**: Drag-and-drop outreach sequence creation.
-- **Real-time Webhooks**: Move from poling/manual sync to real-time email notifications.
-- **Advanced CRM**: Custom lead fields and automated task generation.
+- **Dev**: `npm run dev` (Vite)
+- **Database**: `supabase db push` / `supabase migration new`
+- **Auth**: Profile-based `leads` and `email_accounts` tables linked via `user_id`.
