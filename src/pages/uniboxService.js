@@ -112,7 +112,16 @@ class UniboxService {
       query = query.or(parts.join(","));
     }
 
-    if (folder === "unread") query = query.eq("is_read", false);
+    if (folder === "unread") {
+      query = query.eq("is_read", false);
+    }
+    
+    // Crucial: Only show received inbound emails in the Inbox / Unread tabs.
+    if (folder === "inbox" || folder === "unread") {
+      // Sometimes replies table has type = 'sent' from manual composition.
+      // We explicitly exclude them from showing up as inbound emails.
+      query = query.neq("type", "sent");
+    }
 
     if (search) {
       query = query.or(`from_email.ilike.%${search}%,subject.ilike.%${search}%,body_text.ilike.%${search}%,from_name.ilike.%${search}%`);
@@ -290,10 +299,14 @@ class UniboxService {
 
   static async searchLeads(query) {
     if (!query || query.length < 2) return [];
+    
+    // Sanitize query to avoid PostgREST parsing errors (like commas)
+    const sanitizedQuery = query.replace(/[^\w\s@.]/gi, '');
+    
     const { data, error } = await supabase
       .from("leads")
       .select("id, email, first_name, last_name")
-      .or(`email.ilike.%${query}%,first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
+      .or(`email.ilike.%${sanitizedQuery}%,first_name.ilike.%${sanitizedQuery}%,last_name.ilike.%${sanitizedQuery}%`)
       .limit(10);
 
     if (error) {

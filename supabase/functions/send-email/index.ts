@@ -42,7 +42,30 @@ serve(async (req) => {
     const body = await req.json();
     const { accountId, to, subject, htmlBody, threadId, originalMessageId, leadId } = body;
 
-    console.log('BACKEND RECEIVED:', { accountId, to, subject, htmlBodyLength: htmlBody?.length, threadId, leadId });
+    const logId = crypto.randomUUID();
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const trackerUrl = `${supabaseUrl}/functions/v1/tracker`;
+    
+    let finalHtml = htmlBody || '';
+    if (supabaseUrl && finalHtml) {
+      // Inject open tracking pixel
+      const openPixel = `<img src="${trackerUrl}?type=open&logId=${logId}" width="1" height="1" style="display:none;" />`;
+      
+      // Wrap links for click tracking
+      finalHtml = finalHtml.replace(/<a\s+(?:[^>]*?\s+)?href=(["'])(.*?)\1([^>]*)>/gi, (match, quote, url, rest) => {
+        // Skip mailto:, tel:, or if already a tracking URL
+        if (!url || url.startsWith('mailto:') || url.startsWith('tel:') || url.includes('tracker?type=')) {
+          return match;
+        }
+        const trackingUrl = `${trackerUrl}?type=click&logId=${logId}&url=${encodeURIComponent(url)}`;
+        // We match `href=...` and replace just the URL part
+        return match.replace(`href=${quote}${url}${quote}`, `href=${quote}${trackingUrl}${quote}`);
+      });
+
+      finalHtml = finalHtml + openPixel;
+    }
+
+    console.log('BACKEND RECEIVED:', { accountId, to, subject, htmlBodyLength: htmlBody?.length, threadId, leadId, logId });
 
     if (!accountId || !to || !htmlBody) {
       return new Response(JSON.stringify({ error: `Missing required fields. Got: accountId=${accountId}, to=${to}, htmlBody=${!!htmlBody}` }), {
@@ -106,7 +129,7 @@ serve(async (req) => {
       rawLines.push(`References: ${references}`);
     }
     rawLines.push('');
-    rawLines.push(htmlBody);
+    rawLines.push(finalHtml);
 
     const messageParts = rawLines.join('\r\n');
     const encodedMessage = btoa(unescape(encodeURIComponent(messageParts)))
@@ -174,6 +197,7 @@ serve(async (req) => {
 
     // 6. Save to email_logs for audit trail (AWAITED)
     const { error: logInsertError } = await supabaseClient.from('email_logs').insert({
+      id: logId,
       user_id: user.id,
       email_account_id: accountId,
       thread_id: sendData.threadId,
@@ -182,7 +206,7 @@ serve(async (req) => {
       to_email: to,
       subject: strSubject,
       body_text: plainText,
-      body_html: htmlBody,
+      body_html: finalHtml,
       sent_at: new Date().toISOString(),
       status: 'Sent',
     });
